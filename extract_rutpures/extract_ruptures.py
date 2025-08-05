@@ -14,19 +14,16 @@ parser = argparse.ArgumentParser(description="Parse rupture file and plot fault 
 parser.add_argument('--file_path', type=str, required=True, help='Path to the shakemap event directory')
 parser.add_argument('--region', type=str, default='92/100/16/25', help='Region in the format xmin/xmax/ymin/ymax')
 parser.add_argument('--eventxml', type=str, default=None, help='Path to the rupture event.xml file (optional). Will assume the file is one level up from the file_path if none is provided.')
-# parser.add_argument('--hypocenter', type=str, default='95.925/22.001', help='Hypocenter in the format lon/lat')
+parser.add_argument('--faultgeometry', type=str, default=None, help='Path to a rupture.json fault geometry file (optional).')
 args = parser.parse_args()
 
 file_path = args.file_path
 file = os.path.join(file_path, 'rupt_quads.txt')
 
 
-
 # rgn = [92, 100, 16, 25]    # # [xmin,xmax,ymin,ymax]
 rgn = args.region.split('/')
 rgn = [float(coord) for coord in rgn]  # Convert to float
-
-
 
 
 def parse_rupture_file(file):
@@ -96,6 +93,7 @@ def parse_ruptjson(file):
     import json
 
     # Read the JSON file
+    print(f"Parsing rupture geometry from {file}")
     with open(file, 'r') as f:
         data = json.load(f)
     # Navigate to the coordinates array
@@ -107,7 +105,7 @@ def parse_ruptjson(file):
     y = [corners[0][1], corners[1][1], corners[2][1], corners[3][1], corners[4][1]]
     return x, y
 
-def parse_eventxml_xml(file):
+def parse_eventxml(file):
     tree = ET.parse(file)
     root = tree.getroot()
     # Get the attributes from the <earthquake> tag
@@ -141,20 +139,31 @@ print(f"Average downdip depth: {avg_downdip_depth:.2f} km")
 
 ## Get hypocenter from the event.xml file
 if args.eventxml is not None:
-    eventpath = parse_eventxml(args.eventxml)
+    lat, lon, depth = parse_eventxml(args.eventxml)
+    print(f'lat, lon, depth = ',lat, lon, depth)
 else:
     eventpath = Path(file_path).parents[0] / 'event.xml'
-
+    lat, lon, depth = parse_eventxml(eventpath)
+    print(f"Using default event XML file at: {eventpath}.")
 # check if the eventpath exists
-if not eventpath.exists():
-    print(f"Event XML file not found at {eventpath}. Continue plotting without hypocenter.")
-    lat, lon, depth = None, None, None
-else: 
-    print(f"Event XML file found at {eventpath}. Proceeding with parsing.")
-print(eventpath)
-lat, lon, depth = parse_eventxml_xml(eventpath)
-print(f'lat, lon, depth = ',lat, lon, depth)
+# if not os.path.exists(eventpath):
+#     print(f"Event XML file not found at {eventpath}. Continue plotting without hypocenter.")
+#     lat, lon, depth = None, None, None
+# else: 
+#     print(f"Event XML file found at {eventpath}. Proceeding with parsing.")
+# print(eventpath)
+
 hypocenter = [lon, lat]
+
+# Check if rupture.json file is provided
+if args.faultgeometry is not None:
+    ruptjson = args.faultgeometry
+    if not os.path.exists(ruptjson):
+        print(f"Rupture JSON file not found at {ruptjson}. Continue plotting without USGS fault geometry.")
+        ruptjson = None
+    else:
+        print(f"Rupture JSON file found at {ruptjson}. Proceeding with parsing.")
+
 
 ###################################################
 ############# PLOT THE FAULT RUPTURES #############
@@ -177,27 +186,33 @@ for index, row in ruptures.iterrows():
     p4 = [row['p4_lon'],row['p4_lat']]
     p5 = [row['p1_lon'], row['p1_lat']]  # Closing the polygon
 
-    # Plot the rupture plane projected to the surface
-    fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, label=f"Fault Realizations +S.5c", region=rgn, projection=projection)
-
-    # Plot the updip edge
-    fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, label=f"Fault Updip edge +S.5c", region=rgn, projection=projection)
-    # fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], style="c0.3c", pen="black")
-
+    if index == 0:
+        # Only add label for the first fault to avoid duplicate legend entries
+        # Plot the rupture plane projected to the surface
+        fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, label=f"Fault Realizations +S.5c", region=rgn, projection=projection)
+        # Plot the updip edge
+        fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, label=f"Fault Updip edge +S.5c", region=rgn, projection=projection)
+    else:
+        fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, region=rgn, projection=projection)
+        fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, region=rgn, projection=projection)
+    
 
 
 # Plot hypocenter
 fig.plot(x=hypocenter[0], y = hypocenter[1], style="a0.9c", fill="darkorange", label="M7.8 Hypocenter")
 
-# USGS Fault rupture
-# if ruptjson is not None:
-#     x,y = parse_ruptjson(file)
-#     fig.plot(x=x, y=y, pen="1p,red", style="c0.3c", fill="red", label="USGS Fault Rupture")
+if ruptjson is not None:
+    print("Add: plotting for fault geometry from rupture.json")
+    x,y = parse_ruptjson(ruptjson)
+    fig.plot(x=x, y=y, pen="2p,black", label="USGS Finite Fault Geometry")
+    fig.plot(x=[x[0], x[1]], y=[y[0],y[1]], pen="2p,red", label="USGS Fault Top Edge")
 
 ## Plot some stats about the ruptures
 fig.text(position="BR", offset="-2c/5c", text="Avg. Aspect Ratio: " + str(round(avg_aspect,2)) ,font="20p,Helvetica,black")
 fig.text(position="BR", offset="-2c/4c", text=f"Avg. Fault length: {avg_fault_length:.2f} km" ,font="20p,Helvetica,black")
 fig.text(position="BR", offset="-2c/3c", text=f"Avg. updip depth: {avg_updip_depth:.2f} km" ,font="20p,Helvetica,black")
 fig.text(position="BR", offset="-2c/2c", text=f"Avg. downdip depth: {avg_downdip_depth:.2f} km" ,font="20p,Helvetica,black")
+
+fig.legend()
 
 fig.savefig(file_path+'/ruptures_map-view.png')
