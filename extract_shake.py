@@ -95,7 +95,7 @@ def main():
         event_path = data_path / args.eventid / f"official_v{args.version:02}"
     if not event_path.exists():
         event_path.mkdir(parents=True)
-    input_folder = pathlib.Path(args.folder) / args.eventid
+    input_folder = pathlib.Path(args.folder) # / args.eventid
     for file in input_folder.glob("*.json"):
         # print(f"File: {str(file)}")
         parts = file.with_suffix("").name.split("_")
@@ -105,6 +105,7 @@ def main():
         if version != args.version: # Check the version matches the specified one
             continue
         if ftype == "stationlist":
+            print("Working on stationlist.json ...")
             station_data = {}
             if args.no_dyfi:
                 print(f"DYFI data is being discarded...")
