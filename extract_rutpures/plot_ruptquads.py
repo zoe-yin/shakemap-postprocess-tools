@@ -20,7 +20,6 @@ args = parser.parse_args()
 file_path = args.file_path
 file = os.path.join(file_path, 'rupt_quads.txt')
 
-
 def parse_ruptquads(file):
     ruptures = []  # List to store all ruptures
     current_rupture = []  # Temporary list to store points for the current rupture
