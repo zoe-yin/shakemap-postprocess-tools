@@ -1,5 +1,6 @@
 import pandas as pd
 import pygmt
+from pygmt.params import Position
 import os
 import math
 import numpy as np
@@ -9,6 +10,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 
+
 # Parse command line arguments
 parser = argparse.ArgumentParser(description="Parse rupt_quads.txt file and plot fault planes.")
 parser.add_argument('--file_path', type=str, required=True, help='Path to the shakemap event directory')
@@ -16,12 +18,24 @@ parser.add_argument('--region', type=str, default='None', help='Region in the fo
 parser.add_argument('--eventxml', type=str, default=None, help='Path to the rupture event.xml file (optional). Will assume the file is one level up from the file_path if none is provided.')
 parser.add_argument('--faultgeometry', type=str, default=None, help='Path to a rupture.json fault geometry file (optional).')
 parser.add_argument('--cmt', type=str, default=None, help='Moment Tensor solution file saved as a json (e.g. us6000rsy1_event.json). If provided, will plot the beachball on the map.')
+parser.add_argument(
+    '--np',
+    type=int,
+    choices=[1, 2],
+    default=None,
+    help='Specify which nodal plane to highlight (1 or 2). Only relevant if --cmt is provided.'
+)
+
 args = parser.parse_args()
 
-###
-# To run as a standalone script in a products directory, use the following command:
-# python /Users/hyin/soft/shakemap-postprocess-tools/plot_ruptquads/plot_ruptquads.py --file_path . --eventxml ../event.xml 
 
+# Validate: --np only makes sense if --cmt is provided
+if args.np is not None and args.cmt is None:
+    parser.error("--np requires --cmt to be specified")
+
+###
+# To test or run as a standalone script in a products directory, try using the following command:
+# python /Users/hyin/soft/shakemap-postprocess-tools/plot_ruptquads/plot_ruptquads.py --file_path . --eventxml ../event.xml --cmt '/Users/hyin/shakemap_profiles/default/data/us6000rsy1/us6000rsy1_tensor.json' --np 1
 
 file_path = args.file_path
 file = os.path.join(file_path, 'rupt_quads.txt')
@@ -155,7 +169,7 @@ def plot_cmt(cmt):
         mt,
         xy=(0, 0),
         width=width,
-        facecolor="orange",
+        facecolor="black",
         linewidth=1
     )
 
@@ -173,7 +187,7 @@ def plot_cmt(cmt):
     eventid = cmt["properties"]["eventsourcecode"]
 
     plt.savefig(
-        f'{file_path}/moment-tensor_{eventid}.png',
+        f'{file_path}/moment-tensor.png',
         dpi=300,
         bbox_inches="tight",
         pad_inches=0,
@@ -233,8 +247,8 @@ if args.region == 'None':
     print(f"Determined region: {rgn}")
 
 else: 
-    print(f"Using provided region: {rgn}")
     rgn = args.region.split('/')
+    print(f"Using provided region: {rgn}")
     rgn = [float(coord) for coord in rgn]  # Convert to float
 
 ### Read in CMT if provided
@@ -247,7 +261,6 @@ if args.cmt is not None:
         cmt = json.load(json_file)
 
     plot_cmt(cmt)
-
 
 
 ###################################################
@@ -296,6 +309,27 @@ fig.text(position="BR", offset="-2c/5c", text="Avg. Aspect Ratio: " + str(round(
 fig.text(position="BR", offset="-2c/4c", text=f"Avg. Fault length: {avg_fault_length:.2f} km" ,font="20p,Helvetica,black")
 fig.text(position="BR", offset="-2c/3c", text=f"Avg. updip depth: {avg_updip_depth:.2f} km" ,font="20p,Helvetica,black")
 fig.text(position="BR", offset="-2c/2c", text=f"Avg. downdip depth: {avg_downdip_depth:.2f} km" ,font="20p,Helvetica,black")
+
+## Plot the CMT solution and the nodal plane if provided
+if args.cmt is not None:
+    print("Plotting CMT beachball on the map.")
+
+    # Plot the Obspy beachball PNG on the PyGMT figure 
+    # PyGMT version 0.16.X does not allow position arguments like "TL", so I've updated to PyGMT 0.18.X
+    fig.image(
+        imagefile=f"{file_path}/moment-tensor.png",
+        position=Position("TL",offset="1c,1c"),
+        # position="TL",
+        width="3c",
+    )
+    if args.np is not None:
+        np = args.np
+        strike = cmt["properties"][f"nodal-plane-{np}-strike"]
+        dip = cmt["properties"][f"nodal-plane-{np}-dip"]
+        rake = cmt["properties"][f"nodal-plane-{np}-rake"]
+        fig.text(position="TL", offset='5c/-1.2c', text=f"Nodal Plane {np}", font="20p,Helvetica,black")
+        fig.text(position="TL", offset='5c/-2.2c', text=f"Strike: {strike}\N{DEGREE SIGN}", font="20p,Helvetica,black")
+        fig.text(position="TL", offset='5c/-3.2c', text=f"Dip: {dip}\N{DEGREE SIGN}", font="20p,Helvetica,black")
 
 fig.legend()
 
