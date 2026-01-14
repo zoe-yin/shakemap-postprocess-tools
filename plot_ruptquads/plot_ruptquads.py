@@ -15,10 +15,18 @@ parser.add_argument('--file_path', type=str, required=True, help='Path to the sh
 parser.add_argument('--region', type=str, default='None', help='Region in the format xmin/xmax/ymin/ymax')
 parser.add_argument('--eventxml', type=str, default=None, help='Path to the rupture event.xml file (optional). Will assume the file is one level up from the file_path if none is provided.')
 parser.add_argument('--faultgeometry', type=str, default=None, help='Path to a rupture.json fault geometry file (optional).')
+parser.add_argument('--cmt', type=str, default=None, help='Moment Tensor solution file saved as a json (e.g. us6000rsy1_event.json). If provided, will plot the beachball on the map.')
 args = parser.parse_args()
+
+###
+# To run as a standalone script in a products directory, use the following command:
+# python /Users/hyin/soft/shakemap-postprocess-tools/plot_ruptquads/plot_ruptquads.py --file_path . --eventxml ../event.xml 
+
 
 file_path = args.file_path
 file = os.path.join(file_path, 'rupt_quads.txt')
+
+
 
 def parse_ruptquads(file):
     ruptures = []  # List to store all ruptures
@@ -111,7 +119,67 @@ def parse_eventxml(file):
     lon = float(root.attrib['lon'])
     depth = float(root.attrib['depth'])
     return lat, lon, depth
-    
+
+def plot_cmt(cmt): 
+    import matplotlib.pyplot as plt
+    from obspy.imaging.beachball import beach
+    import numpy as np
+
+    s1 = float(cmt['properties']['nodal-plane-1-strike'])
+    d1 = float(cmt['properties']['nodal-plane-1-dip'])
+    r1 = float(cmt['properties']['nodal-plane-1-rake'])
+
+    mrr1 = float(cmt['properties']['tensor-mrr'])
+    mtt1 = float(cmt['properties']['tensor-mtt'])
+    mpp1 = float(cmt['properties']['tensor-mpp'])
+    mrt1 = float(cmt['properties']['tensor-mrt'])
+    mrp1 = float(cmt['properties']['tensor-mrp'])
+    mtp1 = float(cmt['properties']['tensor-mtp'])
+
+    # Moment tensor
+    mt = [
+        mrr1,
+        mtt1,
+        mpp1,
+        mrt1,
+        mrp1,
+        mtp1,
+    ]
+
+    # Create figure and axes explicitly
+    fig, ax = plt.subplots(figsize=(4, 4))
+
+    # Create beachball (returns a PatchCollection)
+    width = 200
+    bb = beach(
+        mt,
+        xy=(0, 0),
+        width=width,
+        facecolor="orange",
+        linewidth=1
+    )
+
+    # Add to axes
+    ax.add_collection(bb)
+    r = width / 1.9
+
+    # Scale the figure to fit the beachball
+    ax.set_xlim(-r, r)
+    ax.set_ylim(-r, r)
+
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    eventid = cmt["properties"]["eventsourcecode"]
+
+    plt.savefig(
+        f'{file_path}/moment-tensor_{eventid}.png',
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0,
+        transparent=True
+    )
+
 ###################################################
 #                   CALCULATIONS                #
 ###################################################
@@ -141,13 +209,6 @@ else:
     eventpath = Path(file_path).parents[0] / 'event.xml'
     lat, lon, depth = parse_eventxml(eventpath)
     print(f"Using default event XML file at: {eventpath}.")
-# check if the eventpath exists
-# if not os.path.exists(eventpath):
-#     print(f"Event XML file not found at {eventpath}. Continue plotting without hypocenter.")
-#     lat, lon, depth = None, None, None
-# else: 
-#     print(f"Event XML file found at {eventpath}. Proceeding with parsing.")
-# print(eventpath)
 
 hypocenter = [lon, lat]
 
@@ -175,6 +236,18 @@ else:
     print(f"Using provided region: {rgn}")
     rgn = args.region.split('/')
     rgn = [float(coord) for coord in rgn]  # Convert to float
+
+### Read in CMT if provided
+if args.cmt is not None: 
+    cmtfile = args.cmt
+    print(f"CMT solution provided: {cmtfile}")
+
+    import json
+    with open(cmtfile, 'r') as json_file:
+        cmt = json.load(json_file)
+
+    plot_cmt(cmt)
+
 
 
 ###################################################

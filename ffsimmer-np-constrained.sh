@@ -74,7 +74,7 @@ mv current/log.txt current/products/log.txt
 
 # Plot the FFSIMMER rupture planes for NP1
 echo "Plotting FFSIMMER results for NP1"
-python ${softpath}extract_rutpures/plot_ruptquads.py --file_path ${eventpath}/np1/products
+python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products
 
 ## Create ShakeMap for Nodal Plane #2
 echo "Running ShakeMap for NP2 with strike=${NP2_STRIKE} and dip=${NP2_DIP}"
@@ -88,4 +88,4 @@ mv current/log.txt current/products/log.txt
 
 # Plot the FFSIMMER rupture planes for NP2
 echo "Plotting FFSIMMER results for NP2"
-python ${softpath}extract_rutpures/plot_ruptquads.py --file_path ${eventpath}/np2/products
+python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np2/products
