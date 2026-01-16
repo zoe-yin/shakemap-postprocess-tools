@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# set -euo pipefail
 
 # Check that an argument was provided
 if [[ $# -lt 1 ]]; then
@@ -8,10 +7,16 @@ if [[ $# -lt 1 ]]; then
 fi
 
 eventid="$1"
+eventpath='/Users/hyin/shakemap_profiles/default/data/'${eventid}
+
+# Check if the directory for the event already exists
+if [[ -d "$eventpath/current" ]]; then
+    echo "Directory ${eventpath}/current already exists. Deleting current directory."
+    rm -r ${eventpath}/current
+fi
 
 sm_create "$eventid"
 
-eventpath='/Users/hyin/shakemap_profiles/default/data/'${eventid}
 cd $eventpath
 
 softpath='/Users/hyin/soft/shakemap-postprocess-tools/'
@@ -30,7 +35,7 @@ NP1_DIP=$(jq -r '.properties["nodal-plane-1-dip"]' ${eventid}_tensor.json)
 NP2_STRIKE=$(jq -r '.properties["nodal-plane-2-strike"]' ${eventid}_tensor.json)
 NP2_DIP=$(jq -r '.properties["nodal-plane-2-dip"]' ${eventid}_tensor.json)
 
-# Create model.conf file 
+# Create model.conf file, set the number of simulations
 FFSIM_NSIM=5
 FFSIM_TRUE_GRID=True
 
@@ -75,6 +80,7 @@ mv current/log.txt current/products/log.txt
 echo "Plotting FFSIMMER results for NP1"
 # python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products
 python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products --cmt ${eventpath}/${eventid}_tensor.json --np 1
+python ${softpath}qgis-utils/ffsimmer2qgis.py --rupt_quads ${eventpath}/np1/products/rupt_quads.txt --eventxml ${eventpath}/event.xml
 
 ## Create ShakeMap for Nodal Plane #2
 echo "Running ShakeMap for NP2 with strike=${NP2_STRIKE} and dip=${NP2_DIP}"

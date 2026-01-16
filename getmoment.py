@@ -12,6 +12,7 @@ EVENT_URL_TEMPLATE = (
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/{eventid}.geojson"
 )
 
+print("test")
 
 def get_moment_tensor(eventid):
     url = EVENT_URL_TEMPLATE.format(eventid=eventid)
@@ -30,7 +31,9 @@ def get_moment_tensor(eventid):
         "location": jdict["properties"]["place"],
     }
     if "moment-tensor" not in jdict["properties"]["products"]:
+        print(f"WARNING: Could not find moment tensor data for event {eventid}")
         return (event_props, None)
+
     return (event_props, jdict["properties"]["products"]["moment-tensor"][0])
 
 if __name__ == "__main__":

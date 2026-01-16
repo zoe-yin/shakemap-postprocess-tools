@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import pandas as pd
 import pygmt
 from pygmt.params import Position
@@ -9,7 +11,9 @@ from shapely.geometry import Point, LineString
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-
+###
+# To test or run as a standalone script in a products directory, try using the following command:
+# python /Users/hyin/soft/shakemap-postprocess-tools/plot_ruptquads/plot_ruptquads.py --file_path . --eventxml ../event.xml --cmt '/Users/hyin/shakemap_profiles/default/data/us6000rsy1/us6000rsy1_tensor.json' --np 1
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description="Parse rupt_quads.txt file and plot fault planes.")
@@ -33,9 +37,7 @@ args = parser.parse_args()
 if args.np is not None and args.cmt is None:
     parser.error("--np requires --cmt to be specified")
 
-###
-# To test or run as a standalone script in a products directory, try using the following command:
-# python /Users/hyin/soft/shakemap-postprocess-tools/plot_ruptquads/plot_ruptquads.py --file_path . --eventxml ../event.xml --cmt '/Users/hyin/shakemap_profiles/default/data/us6000rsy1/us6000rsy1_tensor.json' --np 1
+
 
 file_path = args.file_path
 file = os.path.join(file_path, 'rupt_quads.txt')
