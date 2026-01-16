@@ -245,7 +245,9 @@ if args.region == 'None':
     max_lon = max(ruptures["p1_lon"].max(), ruptures["p2_lon"].max(), ruptures["p3_lon"].max(), ruptures["p4_lon"].max())
     min_lat = min(ruptures["p1_lat"].min(), ruptures["p2_lat"].min(), ruptures["p3_lat"].min(), ruptures["p4_lat"].min())
     max_lat = max(ruptures["p1_lat"].max(), ruptures["p2_lat"].max(), ruptures["p3_lat"].max(), ruptures["p4_lat"].max())
-    rgn = [min_lon-0.5, max_lon+0.5, min_lat-0.5, max_lat+0.5]  # Add some padding to the region
+    lat_buffer = (max_lat - min_lat) * 0.2  # Add 20% buffer to latitude range
+    lon_buffer = (max_lon - min_lon) * 0.2  # Add 20% buffer to longitude range
+    rgn = [min_lon-lon_buffer, max_lon+lon_buffer, min_lat-lat_buffer, max_lat+lat_buffer]  # Add some padding to the region
     print(f"Determined region: {rgn}")
 
 else: 
@@ -272,16 +274,39 @@ if args.cmt is not None:
 # Initialize figure
 fig = pygmt.Figure()
 # Set PyGMT universal configurations
-pygmt.config(FORMAT_GEO_MAP="ddd.x", MAP_FRAME_TYPE="plain", FONT="14p")
+pygmt.config(FORMAT_GEO_MAP="ddd.x", MAP_FRAME_TYPE="plain", FONT="20p")
 projection = 'M0/0/30c'
 
 fig.basemap(region=rgn, projection=projection, frame=True)
 fig.coast(shorelines=False, region=rgn, projection=projection, water='204/212/219')
 
+# Plot Topo
+topo = '/Users/hyin/usgs_mendenhall/topo/global_srtm15p/SRTM15_V2.7.nc' #@todo: Figure out the best way to un-hard code this
+fig.grdimage(
+    grid=topo,
+    cmap="gray",
+    shading=True,
+    transparency=70,
+)
+
+## Plot PSHA
+psha='/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/psha/GEM-GSHM_PGA-475y-rock_v2023/v2023_1_pga_475_rock_3min.tif'
+# create CPT with values less than 0.1 set to transparent
+pygmt.makecpt(
+    cmap="bilbao",
+    series=[0.1, 1.0, 0.01],  # min, max, increment
+    background="255/255/255/0",
+    reverse=True
+)
+fig.grdimage(
+    grid=psha,
+    cmap=True,
+    shading=True,
+    transparency=40,
+)
 
 # Plot GEM faults
 faults_global = "/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/gem-global-active-faults-master/gmt/gem_active_faults_harmonized.gmt"
-
 fig.plot(
     data=faults_global,
     pen="3p,black",
@@ -297,6 +322,22 @@ fig.plot(
     label="QFaults",
 )
 
+# # EFSM geojson not plotting for some reason
+# # Plot EFSM 20 
+# efsm20 = '/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/efsm_2020_europe-faults/EFSM20_GeoJSON/EFSM20_efsm20_cf_top.geojson'
+# fig.plot(
+#     data=efsm20,
+#     pen="1p,purple",
+#     label="EFSM20",
+# )
+
+# Plot Slab2.0
+slab2 = '/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/slab2.0/slab2.gmt'
+fig.plot(
+    data=slab2,
+    pen="1p,blue",
+    label="Slab 2.0",
+)
 
 ## Plot Fault ruptures (iterate over each fault)
 for index, row in ruptures.iterrows():
@@ -336,7 +377,7 @@ fig.text(position="BR", offset="-2c/2c", text=f"Avg. downdip depth: {avg_downdip
 ## Plot the CMT solution and the nodal plane if provided
 if args.cmt is not None:
     print("Plotting CMT beachball on the map.")
-
+    
     # Plot the Obspy beachball PNG on the PyGMT figure 
     # PyGMT version 0.16.X does not allow position arguments like "TL", so I've updated to PyGMT 0.18.X
     fig.image(
@@ -355,5 +396,6 @@ if args.cmt is not None:
         fig.text(position="TL", offset='5c/-3.2c', text=f"Dip: {dip}\N{DEGREE SIGN}", font="20p,Helvetica,black")
 
 fig.legend()
+fig.colorbar(frame='af+lSeismic Hazard PGA (g) 475 yr. (GEM)', position=Position("BL", cstype="inside", offset=(0.5, 1)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
 
 fig.savefig(file_path+'/ruptures_map-view.png')

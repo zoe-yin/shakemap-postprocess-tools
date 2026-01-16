@@ -24,8 +24,16 @@ softpath='/Users/hyin/soft/shakemap-postprocess-tools/'
 # Run getmoment.py to create the CMT file
 ${softpath}getmoment.py $eventid $eventpath
 
-# Make a directory for each nodal plane
-# These commands will overwrite any existing files in np1 and np2 and subsequent shake command will delete old products completely
+## Check if np1 and np2 directories already exist, if so delete them
+if [[ -d "np1" ]]; then
+    echo "Directory np1 already exists. Deleting np1 directory."
+    rm -r np1
+fi      
+if [[ -d "np2" ]]; then
+    echo "Directory np2 already exists. Deleting np2 directory."
+    rm -r np2
+fi
+
 mkdir np1 np2
 cp -r current/event.xml current/dyfi_dat.json current/instrumented_dat.json np1
 cp -r current/event.xml current/dyfi_dat.json current/instrumented_dat.json np2
