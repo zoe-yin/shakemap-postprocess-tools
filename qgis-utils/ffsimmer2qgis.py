@@ -15,21 +15,32 @@ from shapely.geometry import Polygon, LineString, Point
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description="Parse rupt_quads.txt file and write as QGIS-compatile geojson files.")
-parser.add_argument('--rupt_quads', type=str, default=None, help='Path to the rupt_quads.txt file. The script will look for a file named rupt_quads.txt in this directory. This flag will export the ruptur polygons and updip edge lines as GeoJSON files for use in QGIS.')
+parser.add_argument('--productdir', type=str, default=None, help='Path to the product directory. The script will look for a file named rupt_quads.txt in this directory. This flag will export the rupture polygons and updip edge lines as GeoJSON files for use in QGIS.')
 parser.add_argument('--eventxml', type=str, default=None, help='Path to the event.xml file. The script will look for a file named event.xml in this directory.')
+
+### Example usage: 
+# python /Users/hyin/soft/shakemap-postprocess-tools/qgis-utils/ffsimmer2qgis.py --productdir /Users/hyin/shakemap_profiles/default/data/us6000rsy1/np1/products --eventxml /Users/hyin/shakemap_profiles/default/data/us6000rsy1/np1/event.xml
 
 
 args = parser.parse_args()
 
-file_path = args.rupt_quads
+file_path = args.productdir
 
-if args.rupt_quads is None:
+if args.productdir is None:
     # look for rupt_quads.txt in the current directory
     if os.path.isfile('rupt_quads.txt'):
-        file_path = './rupt_quads.txt'
+        file_path = '.'
     else:
-        parser.error("No --rupt_quads file provided and rupt_quads.txt not found in the current directory.")
+        parser.error("No product directory provided and rupt_quads.txt not found in the current directory.")
 
+
+if args.eventxml is None: 
+    # look for the xml
+    if os.path.isfile('../event.xml'):
+        args.eventxml = '../event.xml'
+    else:
+        print("No event.xml provided and event.xml not found in the parent directory. Epicenter point will not be created.")
+        pass
 
 def parse_ruptquads(file):
     '''
@@ -82,7 +93,7 @@ def parse_eventxml(file):
     depth = float(root.attrib['depth'])
     return lat, lon, depth
 
-ruptures = parse_ruptquads(file_path)
+ruptures = parse_ruptquads(f"{file_path}/rupt_quads.txt")
 
 rupture_polygons = []
 
@@ -132,15 +143,11 @@ gdf_lines = gpd.GeoDataFrame(
 )
 
 
-gdf_polygons.to_file("fault_ruptures.geojson", driver="GeoJSON")
-gdf_lines.to_file("fault_updip_edges.geojson", driver="GeoJSON")
+gdf_polygons.to_file(f"{file_path}/fault_ruptures.geojson", driver="GeoJSON")
+gdf_lines.to_file(f"{file_path}/fault_updip_edges.geojson", driver="GeoJSON")
+
 
 ## Produce Epicenter point GeoJSON
-if args.eventxml is None: 
-    # look for the xml
-    if os.path.isfile('../event.xml'):
-        args.eventxml = '../event.xml'
-
 if args.eventxml is not None:
     lat, lon, depth = parse_eventxml(args.eventxml)
     gdf_epicenter = gpd.GeoDataFrame(
@@ -154,7 +161,7 @@ if args.eventxml is not None:
         }],
         crs="EPSG:4326"
     )
-    gdf_epicenter.to_file("epicenter.geojson", driver="GeoJSON")
+    gdf_epicenter.to_file(f"{file_path}/epicenter.geojson", driver="GeoJSON")    # @todo: writes to the event-level directory instead of the current/products directory. 
 
 # ## Produce QGIS style files
 # from qgis.core import (

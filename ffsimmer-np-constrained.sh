@@ -25,6 +25,7 @@ softpath='/Users/hyin/soft/shakemap-postprocess-tools/'
 ${softpath}getmoment.py $eventid $eventpath
 
 # Make a directory for each nodal plane
+# These commands will overwrite any existing files in np1 and np2 and subsequent shake command will delete old products completely
 mkdir np1 np2
 cp -r current/event.xml current/dyfi_dat.json current/instrumented_dat.json np1
 cp -r current/event.xml current/dyfi_dat.json current/instrumented_dat.json np2
@@ -78,9 +79,9 @@ mv current/log.txt current/products/log.txt
 
 # Plot the FFSIMMER rupture planes for NP1
 echo "Plotting FFSIMMER results for NP1"
-# python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products
 python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products --cmt ${eventpath}/${eventid}_tensor.json --np 1
-python ${softpath}qgis-utils/ffsimmer2qgis.py --rupt_quads ${eventpath}/np1/products/rupt_quads.txt --eventxml ${eventpath}/event.xml
+python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/current/event.xml
+cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
 
 ## Create ShakeMap for Nodal Plane #2
 echo "Running ShakeMap for NP2 with strike=${NP2_STRIKE} and dip=${NP2_DIP}"
@@ -95,3 +96,5 @@ mv current/log.txt current/products/log.txt
 # Plot the FFSIMMER rupture planes for NP2
 echo "Plotting FFSIMMER results for NP2"
 python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np2/products --cmt ${eventpath}/${eventid}_tensor.json --np 2
+python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np2/products --eventxml ${eventpath}/current/event.xml
+cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np2/products/
