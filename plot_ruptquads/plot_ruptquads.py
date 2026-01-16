@@ -141,9 +141,9 @@ def plot_cmt(cmt):
     from obspy.imaging.beachball import beach
     import numpy as np
 
-    s1 = float(cmt['properties']['nodal-plane-1-strike'])
-    d1 = float(cmt['properties']['nodal-plane-1-dip'])
-    r1 = float(cmt['properties']['nodal-plane-1-rake'])
+    # s1 = float(cmt['properties']['nodal-plane-1-strike'])
+    # d1 = float(cmt['properties']['nodal-plane-1-dip'])
+    # r1 = float(cmt['properties']['nodal-plane-1-rake'])
 
     mrr1 = float(cmt['properties']['tensor-mrr'])
     mtt1 = float(cmt['properties']['tensor-mtt'])
@@ -277,6 +277,27 @@ projection = 'M0/0/30c'
 
 fig.basemap(region=rgn, projection=projection, frame=True)
 fig.coast(shorelines=False, region=rgn, projection=projection, water='204/212/219')
+
+
+# Plot GEM faults
+faults_global = "/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/gem-global-active-faults-master/gmt/gem_active_faults_harmonized.gmt"
+
+fig.plot(
+    data=faults_global,
+    pen="3p,black",
+    transparency=60,
+    label="GEM Active Faults",
+)
+
+## Plot QFaults
+qfaults = "/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/Qfaults_GIS/SHP/Qfaults_US_Database.gmt"
+fig.plot(
+    data=qfaults,
+    pen="1p,orange",
+    label="QFaults",
+)
+
+
 ## Plot Fault ruptures (iterate over each fault)
 for index, row in ruptures.iterrows():
     # Extract points for the fault rupture
