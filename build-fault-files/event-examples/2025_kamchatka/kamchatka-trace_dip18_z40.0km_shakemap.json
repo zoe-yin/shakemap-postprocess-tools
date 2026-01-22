@@ -1,0 +1,61 @@
+{
+    "type": "FeatureCollection",
+    "metadata": {
+        "reference": " ",
+        "id": " ",
+        "network": "",
+        "netid": " ",
+        "productcode": " ",
+        "time": " ",
+        "lat": 0.0,
+        "lon": 0.0,
+        "depth": 0.0,
+        "mag": 0.0,
+        "locstring": " ",
+        "mech": " ",
+        "reviewed": " ",
+        "rake": 0.0
+    },
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "rupture type": "rupture extent"
+            },
+            "geometry": {
+                "type": "MultiPolygon",
+                "coordinates": [
+                    [
+                        [
+                            [
+                                161.4845906560444,
+                                52.3626937261775,
+                                0.0
+                            ],
+                            [
+                                157.22499011648654,
+                                48.92109610053944,
+                                0.0
+                            ],
+                            [
+                                155.85802647353714,
+                                49.57262495224662,
+                                -40000.0
+                            ],
+                            [
+                                160.07530672121786,
+                                53.06408498715374,
+                                -40000.0
+                            ],
+                            [
+                                161.4845906560444,
+                                52.3626937261775,
+                                0.0
+                            ]
+                        ]
+                    ]
+                ]
+            }
+        }
+    ]
+}
