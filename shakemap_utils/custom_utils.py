@@ -33,8 +33,7 @@ def parse_ruptjson(file):
     Args:
         file: Path to the JSON file.
     Returns:
-        coordinates, length, width
-        coordinates: list of fault corner coordinates, where the 5th corner closes the plane [[lon, lat, depth], ...]
+        x and y arrays of coordinates.
     """
     import json
 
@@ -46,32 +45,18 @@ def parse_ruptjson(file):
     coordinates = data["features"][0]["geometry"]["coordinates"]
     corners = coordinates[0][0]  # First polygon, first ring
 
-    ##  Check how many points are in corners
-    rows = len(corners)
-    columns = len(corners[0])  # Assuming all inner lists have the same length
-
-    print(f"The number of points is: {rows}")
-    # print(f"The number of coords per point is: {columns}")
-
     length = haversine(corners[0][1], corners[0][0], corners[1][1], corners[1][0])
-    # width = haversine(corners[0][1], corners[0][0], corners[2][1], corners[2][0])
     depth = corners[2][2] - corners[0][2]  
-    dip_width = haversine(corners[0][1], corners[0][0], corners[3][1], corners[3][0])
-    width = math.sqrt(depth**2 + dip_width**2)
+    # Extract the x and y coordinates from the corners
+    x = [corners[0][0], corners[1][0], corners[2][0], corners[3][0], corners[4][0]]
+    y = [corners[0][1], corners[1][1], corners[2][1], corners[3][1], corners[4][1]]
     print(f'length: {str(length)}')
-    print("Fault width:", width)
-    print("Fault_dip width:", dip_width)
     print(f'depth: {str(depth)}')
-
-    # # Extract the x and y coordinates from the corners
-    # x = [corners[0][0], corners[1][0], corners[2][0], corners[3][0], corners[4][0]]
-    # y = [corners[0][1], corners[1][1], corners[2][1], corners[3][1], corners[4][1]]
-
-    return corners, length, width
+    return x, y
 
 def parse_ruptquads(file):
     """
-    Parse a ruptquads.txt file containing rupture plane realization geometries
+    Parse a rupt_quads.txt file containing rupture plane realization geometries (produced by ShakeMap)
     Args:
         file: Path to the ruptquads.txt file.
     Returns:

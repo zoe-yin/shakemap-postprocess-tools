@@ -50,7 +50,6 @@ FFSIM_TRUE_GRID=True
 
 # Create a file for the first nodal plane
 OUTFILE1="np1/model.conf"
-
 cat > "${OUTFILE1}" <<EOF
 [modeling]
     ffsim_nsim = ${FFSIM_NSIM}
@@ -62,6 +61,8 @@ cat > "${OUTFILE1}" <<EOF
 EOF
 echo "Wrote ${OUTFILE1}"
 
+
+# Create a file for the second nodal plane
 OUTFILE2="np2/model.conf"
 cat > "${OUTFILE2}" <<EOF
 [modeling]
@@ -74,6 +75,11 @@ cat > "${OUTFILE2}" <<EOF
 EOF
 echo "Wrote ${OUTFILE2}"
 
+# Check if current_save directory exists, if so delete it
+if [[ -d "current_save" ]]; then
+    echo "Directory current_save already exists. Deleting current_save directory."
+    rm -r current_save
+fi
 mv current current_save
 
 ## Create ShakeMap for Nodal Plane #1
@@ -85,11 +91,6 @@ mv current/rupt_quads.txt current/products/
 cp current/model.conf current/products/
 mv current/log.txt current/products/log.txt
 
-# Plot the FFSIMMER rupture planes for NP1
-echo "Plotting FFSIMMER results for NP1"
-python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products --cmt ${eventpath}/${eventid}_tensor.json --np 1
-python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/current/event.xml
-cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
 
 ## Create ShakeMap for Nodal Plane #2
 echo "Running ShakeMap for NP2 with strike=${NP2_STRIKE} and dip=${NP2_DIP}"
@@ -101,8 +102,18 @@ mv current/rupt_quads.txt current/products/
 cp current/model.conf current/products/
 mv current/log.txt current/products/log.txt
 
+## Get region dimensions from both rupt_quad.txt files
+REGION=$(python /Users/hyin/soft/shakemap-postprocess-tools/calc-region_rupt_quads.py --rq1 ${eventpath}/np1/products/rupt_quads.txt --rq2 ${eventpath}/np2/products/rupt_quads.txt)
+
+
+# Plot the FFSIMMER rupture planes for NP1
+echo "Plotting FFSIMMER results for NP1"
+python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products --cmt ${eventpath}/${eventid}_tensor.json --np 1 --region ${REGION}
+python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/current/event.xml
+cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
+
 # Plot the FFSIMMER rupture planes for NP2
 echo "Plotting FFSIMMER results for NP2"
-python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np2/products --cmt ${eventpath}/${eventid}_tensor.json --np 2
+python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np2/products --cmt ${eventpath}/${eventid}_tensor.json --np 2 --region ${REGION}
 python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np2/products --eventxml ${eventpath}/current/event.xml
 cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np2/products/
