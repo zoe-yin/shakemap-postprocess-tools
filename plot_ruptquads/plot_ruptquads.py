@@ -12,7 +12,9 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import sys
-
+## Import functions from custom_utils.py
+sys.path.append("/Users/hyin/soft/shakemap-postprocess-tools/shakemap_utils")
+from custom_utils import parse_ruptquads, haversine, parse_ruptjson, parse_eventxml, parse_im_json
 
 ###
 # To test or run as a standalone script in a products directory, try using the following command:
@@ -40,10 +42,6 @@ args = parser.parse_args()
 if args.np is not None and args.cmt is None:
     parser.error("--np requires --cmt to be specified")
 
-## Import functions from custom_utils.py
-sys.path.append("/Users/hyin/soft/shakemap-postprocess-tools/shakemap_utils")
-
-from custom_utils import parse_ruptquads, haversine, parse_ruptjson, parse_eventxml
 
 file_path = args.file_path
 file = os.path.join(file_path, 'rupt_quads.txt')
@@ -180,6 +178,8 @@ if args.cmt is not None:
     plot_cmt(cmt)
 
 
+
+
 ###################################################
 ############# PLOT THE FAULT RUPTURES #############
 ###################################################
@@ -217,6 +217,7 @@ fig.grdimage(
     shading=True,
     transparency=40,
 )
+fig.colorbar(frame='af+lSeismic Hazard PGA (g) 475 yr. (GEM)', position=Position("BL", cstype="outside", offset=(-11.5, 0.5)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
 
 # Plot GEM faults
 faults_global = "/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/gem-global-active-faults-master/gmt/gem_active_faults_harmonized.gmt"
@@ -270,7 +271,7 @@ for index, row in ruptures.iterrows():
     else:
         fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, region=rgn, projection=projection)
         fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, region=rgn, projection=projection)
-    
+
 
 # Plot hypocenter
 fig.plot(x=hypocenter[0], y = hypocenter[1], style="a0.9c", fill="darkorange", label="M7.8 Hypocenter")
@@ -280,6 +281,25 @@ if ruptjson is not None:
     x,y = parse_ruptjson(ruptjson)
     fig.plot(x=x, y=y, pen="2p,black", label="USGS Finite Fault Geometry")
     fig.plot(x=[x[0], x[1]], y=[y[0],y[1]], pen="2p,red", label="USGS Fault Top Edge")
+
+## Plot MMI contours if available
+contfile = os.path.join(file_path,'cont_mmi.json')
+if os.path.exists(contfile):
+    gdf = parse_im_json(contfile)
+    pygmt.makecpt(cmap="/Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/mmi_discrete_20bins.cpt")
+    # Plot each contour with its value
+    for i in range(len(gdf)):
+        mi = gdf.iloc[i].value  # Extract the value for the contour
+        # Only plot MMI integer contours
+        if mi % 1.0 == 0:
+            fig.plot(data=gdf.iloc[[i]], cmap=True, zvalue=mi, pen="3p,+z", region=rgn, projection=projection) #Plot each contour individually with its value
+        elif mi % 0.5 == 0:
+            fig.plot(data=gdf.iloc[[i]], cmap=True, zvalue=mi, pen="1p,+z", region=rgn, projection=projection) #Plot each contour individually with its value
+        else:
+            print("Something went wrong with the contours...")
+    fig.colorbar(frame='af+lMMI', position=Position("BL", cstype="outside", offset=(-5.5,0.5)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
+    # frame='af+lSeismic Hazard PGA (g) 475 yr. (GEM)'
+
 
 ## Plot some stats about the ruptures
 fig.text(position="BR", offset="-2c/5c", text="Avg. Aspect Ratio: " + str(round(avg_aspect,2)) ,font="20p,Helvetica,black")
@@ -300,15 +320,14 @@ if args.cmt is not None:
         width="3c",
     )
     if args.np is not None:
-        np = args.np
-        strike = cmt["properties"][f"nodal-plane-{np}-strike"]
-        dip = cmt["properties"][f"nodal-plane-{np}-dip"]
-        rake = cmt["properties"][f"nodal-plane-{np}-rake"]
-        fig.text(position="TL", offset='5c/-1.2c', text=f"Nodal Plane {np}", font="20p,Helvetica,black")
+        strike = cmt["properties"][f"nodal-plane-{args.np}-strike"]
+        dip = cmt["properties"][f"nodal-plane-{args.np}-dip"]
+        rake = cmt["properties"][f"nodal-plane-{args.np}-rake"]
+        fig.text(position="TL", offset='5c/-1.2c', text=f"Nodal Plane {args.np}", font="20p,Helvetica,black")
         fig.text(position="TL", offset='5c/-2.2c', text=f"Strike: {strike}\N{DEGREE SIGN}", font="20p,Helvetica,black")
         fig.text(position="TL", offset='5c/-3.2c', text=f"Dip: {dip}\N{DEGREE SIGN}", font="20p,Helvetica,black")
 
 fig.legend()
-fig.colorbar(frame='af+lSeismic Hazard PGA (g) 475 yr. (GEM)', position=Position("BL", cstype="inside", offset=(0.5, 1)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
+
 
 fig.savefig(file_path+'/ruptures_map-view.png')

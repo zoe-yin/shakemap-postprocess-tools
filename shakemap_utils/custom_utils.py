@@ -98,6 +98,32 @@ def parse_ruptquads(file):
     
     return pd.DataFrame(data)
 
+def parse_im_json(file):
+    """
+    Parse a JSON file containing intensity measure data produced by ShakeMap.
+    e.g., cont_mmi.json, cont_pga.json, cont_pgv.json, etc. 
+    Args:
+        file: Path to the JSON file.
+    Returns:
+        Geodataframe with IM data. Ready to plot in PyGMT
+    """
+    import json
+    from shapely.geometry import shape
+    import geopandas as gpd
+
+    # Read the JSON file
+    print(f"Parsing intensity measure data from {file}")
+    with open(file, 'r') as f:
+        data = json.load(f)
+    # Convert GeoJSON-like dicts to shapely geometries
+    # Extract 'value' from each feature's properties
+    values = [feature['properties']['value'] for feature in data['features']]
+    geoms = [shape(feature['geometry']) for feature in data['features']]
+    gdf = gpd.GeoDataFrame({'value': values}, geometry=geoms)
+    gdf = gdf.set_crs('epsg:4326')
+    
+    return gdf
+
 def parse_eventxml(file):
     tree = ET.parse(file)
     root = tree.getroot()
