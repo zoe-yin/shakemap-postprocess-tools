@@ -27,9 +27,6 @@ def get_region_from_rq(rupture):
     max_lon = max(rupture["p1_lon"].max(), rupture["p2_lon"].max(), rupture["p3_lon"].max(), rupture["p4_lon"].max())
     min_lat = min(rupture["p1_lat"].min(), rupture["p2_lat"].min(), rupture["p3_lat"].min(), rupture["p4_lat"].min())
     max_lat = max(rupture["p1_lat"].max(), rupture["p2_lat"].max(), rupture["p3_lat"].max(), rupture["p4_lat"].max())
-    # lat_buffer = (max_lat - min_lat) * 0.2  # Add 20% buffer to latitude range
-    # lon_buffer = (max_lon - min_lon) * 0.2  # Add 20% buffer to longitude range
-    # rgn = [min_lon-lon_buffer, max_lon+lon_buffer, min_lat-lat_buffer, max_lat+lat_buffer]  # Add returned region with buffer
     rgn = [min_lon, max_lon, min_lat, max_lat]
     return rgn
 
@@ -42,8 +39,8 @@ max_lon = max(rgn1[1], rgn2[1])
 min_lat = min(rgn1[2], rgn2[2])
 max_lat = max(rgn1[3], rgn2[3]) 
 
-lat_buffer = (max_lat - min_lat) * 0.2  # Add 20% buffer to latitude range
-lon_buffer = (max_lon - min_lon) * 0.2  # Add 20% buffer to longitude range
+lat_buffer = (max_lat - min_lat) * 0.8  # Add 80% buffer to latitude range
+lon_buffer = (max_lon - min_lon) * 0.8  # Add 80% buffer to longitude range
 
 # Final combined region
 combined_rgn = [min_lon-lon_buffer, max_lon+lon_buffer, min_lat-lat_buffer, max_lat+lat_buffer]

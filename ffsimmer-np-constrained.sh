@@ -8,6 +8,7 @@ fi
 
 eventid="$1"
 eventpath='/Users/hyin/shakemap_profiles/default/data/'${eventid}
+softpath='/Users/hyin/soft/shakemap-postprocess-tools/'
 
 # Check if the directory for the event already exists
 if [[ -d "$eventpath/current" ]]; then
@@ -18,8 +19,6 @@ fi
 sm_create "$eventid"
 
 cd $eventpath
-
-softpath='/Users/hyin/soft/shakemap-postprocess-tools/'
 
 # Run getmoment.py to create the CMT file
 ${softpath}getmoment.py $eventid $eventpath
@@ -45,7 +44,7 @@ NP2_STRIKE=$(jq -r '.properties["nodal-plane-2-strike"]' ${eventid}_tensor.json)
 NP2_DIP=$(jq -r '.properties["nodal-plane-2-dip"]' ${eventid}_tensor.json)
 
 # Create model.conf file, set the number of simulations
-FFSIM_NSIM=5
+FFSIM_NSIM=1
 FFSIM_TRUE_GRID=True
 
 # Create a file for the first nodal plane
@@ -75,12 +74,12 @@ cat > "${OUTFILE2}" <<EOF
 EOF
 echo "Wrote ${OUTFILE2}"
 
-# Check if current_save directory exists, if so delete it
-if [[ -d "current_save" ]]; then
-    echo "Directory current_save already exists. Deleting current_save directory."
-    rm -r current_save
+# Check if sm_create_input directory exists, if so delete it
+if [[ -d "sm_create_input" ]]; then
+    echo "Directory sm_create_input already exists. Deleting sm_create_input directory."
+    rm -r sm_create_input
 fi
-mv current current_save
+mv current sm_create_input
 
 ## Create ShakeMap for Nodal Plane #1
 echo "Running ShakeMap for NP1 with strike=${NP1_STRIKE} and dip=${NP1_DIP}"
@@ -90,7 +89,6 @@ shake $eventid select assemble -c "test" model contour mapping info gridxml rast
 mv current/rupt_quads.txt current/products/
 cp current/model.conf current/products/
 mv current/log.txt current/products/log.txt
-
 
 ## Create ShakeMap for Nodal Plane #2
 echo "Running ShakeMap for NP2 with strike=${NP2_STRIKE} and dip=${NP2_DIP}"
@@ -104,16 +102,44 @@ mv current/log.txt current/products/log.txt
 
 ## Get region dimensions from both rupt_quad.txt files
 REGION=$(python /Users/hyin/soft/shakemap-postprocess-tools/calc-region_rupt_quads.py --rq1 ${eventpath}/np1/products/rupt_quads.txt --rq2 ${eventpath}/np2/products/rupt_quads.txt)
+echo "Using region: ${REGION}"
 
 
 # Plot the FFSIMMER rupture planes for NP1
 echo "Plotting FFSIMMER results for NP1"
-python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products --cmt ${eventpath}/${eventid}_tensor.json --np 1 --region ${REGION}
+# python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products --cmt ${eventpath}/${eventid}_tensor.json --np 1 --region "${REGION}"
+python ${softpath}plot_ruptquads/plot_ruptquads.py \
+  --file_path ${eventpath}/np1/products \
+  --cmt ${eventpath}/${eventid}_tensor.json \
+  --np 1 \
+  --region="${REGION}"
+
 python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/current/event.xml
 cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
 
 # Plot the FFSIMMER rupture planes for NP2
 echo "Plotting FFSIMMER results for NP2"
-python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np2/products --cmt ${eventpath}/${eventid}_tensor.json --np 2 --region ${REGION}
+# python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np2/products --cmt ${eventpath}/${eventid}_tensor.json --np 2 --region "${REGION}"
+python ${softpath}plot_ruptquads/plot_ruptquads.py \
+  --file_path ${eventpath}/np2/products \
+  --cmt ${eventpath}/${eventid}_tensor.json \
+  --np 2 \
+  --region="${REGION}"
 python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np2/products --eventxml ${eventpath}/current/event.xml
 cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np2/products/
+
+# Run most recent shakemap
+rm current
+sm_create "$eventid"
+# Run the "current" ShakeMap
+shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt
+
+
+# Plot most recent shakeMap
+echo "Plotting FFSIMMER results for NP1"
+python ${softpath}plot_ruptquads/plot_ruptquads.py \
+  --file_path ${eventpath}/current/products \
+  --faultgeometry ${eventpath}/current/rupture.json \
+  --region="${REGION}"
+  --contours True
+mv current current_recent

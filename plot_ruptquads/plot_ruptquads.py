@@ -26,6 +26,7 @@ parser.add_argument('--file_path', type=str, required=True, help='Path to the sh
 parser.add_argument('--region', type=str, default='None', help='Region in the format xmin/xmax/ymin/ymax')
 parser.add_argument('--eventxml', type=str, default=None, help='Path to the rupture event.xml file (optional). Will assume the file is one level up from the file_path if none is provided.')
 parser.add_argument('--faultgeometry', type=str, default=None, help='Path to a rupture.json fault geometry file (optional).')
+parser.add_argument('--contours', type=str, default=None, help='Path to a contour json file containing MMI contours OR set to "True" to look for the default location (optional).')
 parser.add_argument('--cmt', type=str, default=None, help='Moment Tensor solution file saved as a json (e.g. us6000rsy1_event.json). If provided, will plot the beachball on the map.')
 parser.add_argument(
     '--np',
@@ -44,8 +45,13 @@ if args.np is not None and args.cmt is None:
 
 
 file_path = args.file_path
-file = os.path.join(file_path, 'rupt_quads.txt')
 
+# Check if there is a rupt_quads.txt file in the provided file_path
+if os.path.exists(file_path+'/rupt_quads.txt'):
+    file = os.path.join(file_path, 'rupt_quads.txt')
+else:
+    print(f"Error: The specified file path {file_path} does not exist.")
+    file=None
 
 def plot_cmt(cmt): 
     import matplotlib.pyplot as plt
@@ -110,23 +116,23 @@ def plot_cmt(cmt):
 ###################################################
 #                   CALCULATIONS                #
 ###################################################
+if file is not None:
+    ruptures = parse_ruptquads(file)
 
-ruptures = parse_ruptquads(file)
+    ruptures["fault_length_km"] = ruptures.apply(lambda row: haversine(row["p1_lat"], row["p1_lon"], row["p2_lat"], row["p2_lon"]), axis=1)
+    ruptures["fault_width_km"] = np.sqrt((ruptures.apply(lambda row: haversine(row["p1_lat"], row["p1_lon"], row["p4_lat"], row["p4_lon"]), axis=1)**2)+ (ruptures["p4_depth"]**2))
+    ruptures["aspect_ratio"] = ruptures["fault_length_km"] / ruptures["fault_width_km"]
 
-ruptures["fault_length_km"] = ruptures.apply(lambda row: haversine(row["p1_lat"], row["p1_lon"], row["p2_lat"], row["p2_lon"]), axis=1)
-ruptures["fault_width_km"] = np.sqrt((ruptures.apply(lambda row: haversine(row["p1_lat"], row["p1_lon"], row["p4_lat"], row["p4_lon"]), axis=1)**2)+ (ruptures["p4_depth"]**2))
-ruptures["aspect_ratio"] = ruptures["fault_length_km"] / ruptures["fault_width_km"]
-
-# Calculate average aspect ratio
-avg_aspect = ruptures["aspect_ratio"].mean()
-avg_fault_length = ruptures["fault_length_km"].mean()
-# Calculate average updip depth
-avg_updip_depth = ruptures[["p1_depth"]].mean(axis=1).mean()
-avg_downdip_depth = ruptures[["p3_depth"]].mean(axis=1).mean()
-print(f"Average aspect ratio: {avg_aspect:.2f}")
-print(f"Average Fault length: {avg_fault_length:.2f} km")
-print(f"Average updip depth: {avg_updip_depth:.2f} km")
-print(f"Average downdip depth: {avg_downdip_depth:.2f} km")
+    # Calculate average aspect ratio
+    avg_aspect = ruptures["aspect_ratio"].mean()
+    avg_fault_length = ruptures["fault_length_km"].mean()
+    # Calculate average updip depth
+    avg_updip_depth = ruptures[["p1_depth"]].mean(axis=1).mean()
+    avg_downdip_depth = ruptures[["p3_depth"]].mean(axis=1).mean()
+    print(f"Average aspect ratio: {avg_aspect:.2f}")
+    print(f"Average Fault length: {avg_fault_length:.2f} km")
+    print(f"Average updip depth: {avg_updip_depth:.2f} km")
+    print(f"Average downdip depth: {avg_downdip_depth:.2f} km")
 
 ## Get hypocenter from the event.xml file
 if args.eventxml is not None:
@@ -137,7 +143,7 @@ else:
     lat, lon, depth = parse_eventxml(eventpath)
     print(f"Using default event XML file at: {eventpath}.")
 
-hypocenter = [lon, lat]
+hypocenter = [lon, lat]                                                 
 
 # Check if rupture.json file is provided
 ruptjson=None
@@ -176,8 +182,6 @@ if args.cmt is not None:
         cmt = json.load(json_file)
 
     plot_cmt(cmt)
-
-
 
 
 ###################################################
@@ -253,24 +257,25 @@ fig.plot(
     label="Slab 2.0",
 )
 
-## Plot Fault ruptures (iterate over each fault)
-for index, row in ruptures.iterrows():
-    # Extract points for the fault rupture
-    p1 = [row['p1_lon'],row['p1_lat']]
-    p2 = [row['p2_lon'],row['p2_lat']]
-    p3 = [row['p3_lon'],row['p3_lat']]
-    p4 = [row['p4_lon'],row['p4_lat']]
-    p5 = [row['p1_lon'], row['p1_lat']]  # Closing the polygon
+if file is not None:
+    ## Plot Fault ruptures (iterate over each fault)
+    for index, row in ruptures.iterrows():
+        # Extract points for the fault rupture
+        p1 = [row['p1_lon'],row['p1_lat']]
+        p2 = [row['p2_lon'],row['p2_lat']]
+        p3 = [row['p3_lon'],row['p3_lat']]
+        p4 = [row['p4_lon'],row['p4_lat']]
+        p5 = [row['p1_lon'], row['p1_lat']]  # Closing the polygon
 
-    if index == 0:
-        # Only add label for the first fault to avoid duplicate legend entries
-        # Plot the rupture plane projected to the surface
-        fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, label=f"Fault Realizations +S.5c", region=rgn, projection=projection)
-        # Plot the updip edge
-        fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, label=f"Fault Updip edge +S.5c", region=rgn, projection=projection)
-    else:
-        fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, region=rgn, projection=projection)
-        fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, region=rgn, projection=projection)
+        if index == 0:
+            # Only add label for the first fault to avoid duplicate legend entries
+            # Plot the rupture plane projected to the surface
+            fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, label=f"Fault Realizations +S.5c", region=rgn, projection=projection)
+            # Plot the updip edge
+            fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, label=f"Fault Updip edge +S.5c", region=rgn, projection=projection)
+        else:
+            fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, region=rgn, projection=projection)
+            fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, region=rgn, projection=projection)
 
 
 # Plot hypocenter
@@ -282,30 +287,41 @@ if ruptjson is not None:
     fig.plot(x=x, y=y, pen="2p,black", label="USGS Finite Fault Geometry")
     fig.plot(x=[x[0], x[1]], y=[y[0],y[1]], pen="2p,red", label="USGS Fault Top Edge")
 
+
+
 ## Plot MMI contours if available
-contfile = os.path.join(file_path,'cont_mmi.json')
-if os.path.exists(contfile):
-    gdf = parse_im_json(contfile)
-    pygmt.makecpt(cmap="/Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/mmi_discrete_20bins.cpt")
-    # Plot each contour with its value
-    for i in range(len(gdf)):
-        mi = gdf.iloc[i].value  # Extract the value for the contour
-        # Only plot MMI integer contours
-        if mi % 1.0 == 0:
-            fig.plot(data=gdf.iloc[[i]], cmap=True, zvalue=mi, pen="3p,+z", region=rgn, projection=projection) #Plot each contour individually with its value
-        elif mi % 0.5 == 0:
-            fig.plot(data=gdf.iloc[[i]], cmap=True, zvalue=mi, pen="1p,+z", region=rgn, projection=projection) #Plot each contour individually with its value
-        else:
-            print("Something went wrong with the contours...")
-    fig.colorbar(frame='af+lMMI', position=Position("BL", cstype="outside", offset=(-5.5,0.5)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
-    # frame='af+lSeismic Hazard PGA (g) 475 yr. (GEM)'
 
+# Check if the user provided a contour file as an argument
+if args.contours is not None:   
+    if args.contours == 'True':
+        print("Contour file argument provided but no path specified. Trying the default location.")
+        contfile = os.path.join(file_path,'cont_mmi.json')
+    else:   
+        # Check to make sure the provided contour file exists
+        contfile = args.contours
+    # either way, check that the contfile exists before trying to parse and plot
+    # If it exists, plot it, if it doesn't, don't. 
+    if os.path.exists(contfile):
+        gdf = parse_im_json(contfile)
+        pygmt.makecpt(cmap="/Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/mmi_discrete_20bins.cpt")
+        # Plot each contour with its value
+        for i in range(len(gdf)):
+            mi = gdf.iloc[i].value  # Extract the value for the contour
+            # Only plot MMI integer contours
+            if mi % 1.0 == 0:
+                fig.plot(data=gdf.iloc[[i]], cmap=True, zvalue=mi, pen="3p,+z", region=rgn, projection=projection) #Plot each contour individually with its value
+            elif mi % 0.5 == 0:
+                fig.plot(data=gdf.iloc[[i]], cmap=True, zvalue=mi, pen="1p,+z", region=rgn, projection=projection) #Plot each contour individually with its value
+            else:
+                print("Something went wrong with the contours...")
+        fig.colorbar(frame='af+lMMI', position=Position("BL", cstype="outside", offset=(-5.5,0.5)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
 
-## Plot some stats about the ruptures
-fig.text(position="BR", offset="-2c/5c", text="Avg. Aspect Ratio: " + str(round(avg_aspect,2)) ,font="20p,Helvetica,black")
-fig.text(position="BR", offset="-2c/4c", text=f"Avg. Fault length: {avg_fault_length:.2f} km" ,font="20p,Helvetica,black")
-fig.text(position="BR", offset="-2c/3c", text=f"Avg. updip depth: {avg_updip_depth:.2f} km" ,font="20p,Helvetica,black")
-fig.text(position="BR", offset="-2c/2c", text=f"Avg. downdip depth: {avg_downdip_depth:.2f} km" ,font="20p,Helvetica,black")
+if file is not None:
+    ## Plot some stats about the ruptures
+    fig.text(position="BR", offset="-2c/5c", text="Avg. Aspect Ratio: " + str(round(avg_aspect,2)) ,font="20p,Helvetica,black")
+    fig.text(position="BR", offset="-2c/4c", text=f"Avg. Fault length: {avg_fault_length:.2f} km" ,font="20p,Helvetica,black")
+    fig.text(position="BR", offset="-2c/3c", text=f"Avg. updip depth: {avg_updip_depth:.2f} km" ,font="20p,Helvetica,black")
+    fig.text(position="BR", offset="-2c/2c", text=f"Avg. downdip depth: {avg_downdip_depth:.2f} km" ,font="20p,Helvetica,black")
 
 ## Plot the CMT solution and the nodal plane if provided
 if args.cmt is not None:
