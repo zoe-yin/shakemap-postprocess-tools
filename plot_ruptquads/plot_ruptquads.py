@@ -9,7 +9,7 @@ import numpy as np
 import argparse
 from shapely.geometry import Point, LineString
 from pathlib import Path
-import xml.etree.ElementTree as ET
+# import xml.etree.ElementTree as ET
 
 import sys
 ## Import functions from custom_utils.py
@@ -27,6 +27,8 @@ parser.add_argument('--region', type=str, default='None', help='Region in the fo
 parser.add_argument('--eventxml', type=str, default=None, help='Path to the rupture event.xml file (optional). Will assume the file is one level up from the file_path if none is provided.')
 parser.add_argument('--faultgeometry', type=str, default=None, help='Path to a rupture.json fault geometry file (optional).')
 parser.add_argument('--contours', type=str, default=None, help='Path to a contour json file containing MMI contours OR set to "True" to look for the default location (optional).')
+parser.add_argument('--topo', type=str, default=None, help='True or False. Whether to plot the topo grid. If True, will look for the topo grid in the default location. (optional)')
+parser.add_argument('--psha', type=str, default=None, help='True or False. Whether to plot the psha grid. If True, will look for the psha grid in the default location. (optional)')
 parser.add_argument('--cmt', type=str, default=None, help='Moment Tensor solution file saved as a json (e.g. us6000rsy1_event.json). If provided, will plot the beachball on the map.')
 parser.add_argument(
     '--np',
@@ -197,31 +199,42 @@ projection = 'M0/0/30c'
 fig.basemap(region=rgn, projection=projection, frame=True)
 fig.coast(shorelines=False, region=rgn, projection=projection, water='204/212/219')
 
-# Plot Topo
-topo = '/Users/hyin/usgs_mendenhall/topo/global_srtm15p/SRTM15_V2.7.nc' #@todo: Figure out the best way to un-hard code this
-fig.grdimage(
-    grid=topo,
-    cmap="gray",
-    shading=True,
-    transparency=70,
-)
+if args.topo == "True":
+    # Plot Topo
+    topo = '/Users/hyin/usgs_mendenhall/topo/global_srtm15p/SRTM15_V2.7.nc' #@todo: Figure out the best way to un-hard code this
+    fig.grdimage(
+        grid=topo,
+        cmap="gray",
+        shading=True,
+        transparency=70,
+    )
 
-## Plot PSHA
-psha='/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/psha/GEM-GSHM_PGA-475y-rock_v2023/v2023_1_pga_475_rock_3min.tif'
-# create CPT with values less than 0.1 set to transparent
-pygmt.makecpt(
-    cmap="bilbao",
-    series=[0.1, 1.0, 0.01],  # min, max, increment
-    background="255/255/255/0",
-    reverse=True
+if args.psha == "True":
+    ## Plot PSHA
+    psha='/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/psha/GEM-GSHM_PGA-475y-rock_v2023/v2023_1_pga_475_rock_3min.tif'
+    # create CPT with values less than 0.1 set to transparent
+    pygmt.makecpt(
+        cmap="bilbao",
+        series=[0.1, 1.0, 0.01],  # min, max, increment
+        background="255/255/255/0",
+        reverse=True
+    )
+    fig.grdimage(
+        grid=psha,
+        cmap=True,
+        shading=True,
+        transparency=40,
+    )
+    fig.colorbar(frame='af+lSeismic Hazard PGA (g) 475 yr. (GEM)', position=Position("BL", cstype="outside", offset=(-11.5, 0.5)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
+
+
+# Plot Slab2.0
+slab2 = '/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/slab2.0/slab2.gmt'
+fig.plot(
+    data=slab2,
+    pen="1p,blue",
+    label="Slab 2.0",
 )
-fig.grdimage(
-    grid=psha,
-    cmap=True,
-    shading=True,
-    transparency=40,
-)
-fig.colorbar(frame='af+lSeismic Hazard PGA (g) 475 yr. (GEM)', position=Position("BL", cstype="outside", offset=(-11.5, 0.5)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
 
 # Plot GEM faults
 faults_global = "/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/gem-global-active-faults-master/gmt/gem_active_faults_harmonized.gmt"
@@ -249,14 +262,6 @@ fig.plot(
 #     label="EFSM20",
 # )
 
-# Plot Slab2.0
-slab2 = '/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/slab2.0/slab2.gmt'
-fig.plot(
-    data=slab2,
-    pen="1p,blue",
-    label="Slab 2.0",
-)
-
 if file is not None:
     ## Plot Fault ruptures (iterate over each fault)
     for index, row in ruptures.iterrows():
@@ -270,28 +275,14 @@ if file is not None:
         if index == 0:
             # Only add label for the first fault to avoid duplicate legend entries
             # Plot the rupture plane projected to the surface
-            fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, label=f"Fault Realizations +S.5c", region=rgn, projection=projection)
+            fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=70, label=f"Fault Realizations +S.5c", region=rgn, projection=projection)
             # Plot the updip edge
-            fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, label=f"Fault Updip edge +S.5c", region=rgn, projection=projection)
+            fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=50, label=f"Fault Updip edge +S.5c", region=rgn, projection=projection)
         else:
-            fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=90, region=rgn, projection=projection)
-            fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=80, region=rgn, projection=projection)
-
-
-# Plot hypocenter
-fig.plot(x=hypocenter[0], y = hypocenter[1], style="a0.9c", fill="darkorange", label="M7.8 Hypocenter")
-
-if ruptjson is not None:
-    print("Add: plotting for fault geometry from rupture.json")
-    x,y = parse_ruptjson(ruptjson)
-    fig.plot(x=x, y=y, pen="2p,black", label="USGS Finite Fault Geometry")
-    fig.plot(x=[x[0], x[1]], y=[y[0],y[1]], pen="2p,red", label="USGS Fault Top Edge")
-
-
+            fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=70, region=rgn, projection=projection)
+            fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=50, region=rgn, projection=projection)
 
 ## Plot MMI contours if available
-
-# Check if the user provided a contour file as an argument
 if args.contours is not None:   
     if args.contours == 'True':
         print("Contour file argument provided but no path specified. Trying the default location.")
@@ -315,6 +306,19 @@ if args.contours is not None:
             else:
                 print("Something went wrong with the contours...")
         fig.colorbar(frame='af+lMMI', position=Position("BL", cstype="outside", offset=(-5.5,0.5)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
+
+# Plot a fault geometry from a rupture.json file if provided
+if ruptjson is not None:
+    import geopandas as gpd
+    print(f"Add: plotting for fault geometry from {ruptjson}")
+    # x,y = parse_ruptjson(ruptjson)
+    gdf = gpd.read_file(ruptjson)
+    # fig.plot(x=x, y=y, pen="2p,black", label="USGS Finite Fault Geometry")
+    fig.plot(data=gdf, pen="2p,black", label="USGS Finite Fault Geometry")
+    # fig.plot(x=[x[0], x[1]], y=[y[0],y[1]], pen="2p,red", label="USGS Fault Top Edge")
+
+# Plot hypocenter
+fig.plot(x=hypocenter[0], y = hypocenter[1], style="a0.9c", pen="1p,black", fill="darkorange", label="Hypocenter")
 
 if file is not None:
     ## Plot some stats about the ruptures

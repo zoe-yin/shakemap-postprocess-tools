@@ -104,6 +104,8 @@ mv current/log.txt current/products/log.txt
 REGION=$(python /Users/hyin/soft/shakemap-postprocess-tools/calc-region_rupt_quads.py --rq1 ${eventpath}/np1/products/rupt_quads.txt --rq2 ${eventpath}/np2/products/rupt_quads.txt)
 echo "Using region: ${REGION}"
 
+# write the region to a file for later use
+echo "${REGION}" > ${eventpath}/region.txt
 
 # Plot the FFSIMMER rupture planes for NP1
 echo "Plotting FFSIMMER results for NP1"
@@ -112,7 +114,9 @@ python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --file_path ${eventpath}/np1/products \
   --cmt ${eventpath}/${eventid}_tensor.json \
   --np 1 \
-  --region="${REGION}"
+  --region="${REGION}" \
+  --psha True \
+  --topo True
 
 python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/current/event.xml
 cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
@@ -124,7 +128,9 @@ python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --file_path ${eventpath}/np2/products \
   --cmt ${eventpath}/${eventid}_tensor.json \
   --np 2 \
-  --region="${REGION}"
+  --region="${REGION}"\
+  --psha True \
+  --topo True
 python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np2/products --eventxml ${eventpath}/current/event.xml
 cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np2/products/
 
@@ -143,7 +149,8 @@ python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --file_path ${eventpath}/current/products \
   --faultgeometry ${eventpath}/current/rupture.json \
   --region="${REGION}" \
-  --contours True
+  --contours True \
+  --topo True
 
 # Check if current_recent directory exists, if so delete it
 if [[ -d "current_recent" ]]; then
