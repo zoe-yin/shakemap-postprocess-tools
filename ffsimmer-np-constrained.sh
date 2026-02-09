@@ -130,16 +130,24 @@ cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath
 
 # Run most recent shakemap
 rm current
+echo "Running sm_create once more..."
 sm_create "$eventid"
+
 # Run the "current" ShakeMap
+echo "Running the current ShakeMap..."
 shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt
 
-
 # Plot most recent shakeMap
-echo "Plotting FFSIMMER results for NP1"
+echo "Plotting the current ShakeMap"
 python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --file_path ${eventpath}/current/products \
   --faultgeometry ${eventpath}/current/rupture.json \
-  --region="${REGION}"
+  --region="${REGION}" \
   --contours True
+
+# Check if current_recent directory exists, if so delete it
+if [[ -d "current_recent" ]]; then
+    echo "Directory current_recent already exists. Deleting current_recent directory."
+    rm -r current_recent
+fi
 mv current current_recent
