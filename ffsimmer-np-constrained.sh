@@ -153,8 +153,8 @@ python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --topo True
 
 # Check if current_recent directory exists, if so delete it
-if [[ -d "current_recent" ]]; then
-    echo "Directory current_recent already exists. Deleting current_recent directory."
-    rm -r current_recent
+if [[ -d "shakemap_reproduction" ]]; then
+    echo "Directory shakemap_reproduction already exists. Deleting shakemap_reproduction directory."
+    rm -r shakemap_reproduction
 fi
-mv current current_recent
+mv current shakemap_reproduction
