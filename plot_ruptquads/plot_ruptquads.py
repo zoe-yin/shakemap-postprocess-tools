@@ -52,7 +52,7 @@ file_path = args.file_path
 if os.path.exists(file_path+'/rupt_quads.txt'):
     file = os.path.join(file_path, 'rupt_quads.txt')
 else:
-    print(f"Error: The specified file path {file_path} does not exist.")
+    print(f"No rupt_quads file found: {file_path+'/rupt_quads.txt'}. Continuing without plotting ruptquads")
     file=None
 
 def plot_cmt(cmt): 
@@ -310,7 +310,7 @@ if args.contours is not None:
 # Plot a fault geometry from a rupture.json file if provided
 if ruptjson is not None:
     import geopandas as gpd
-    print(f"Add: plotting for fault geometry from {ruptjson}")
+    print(f"Plotting fault geometry from {ruptjson}")
     # x,y = parse_ruptjson(ruptjson)
     gdf = gpd.read_file(ruptjson)
     # fig.plot(x=x, y=y, pen="2p,black", label="USGS Finite Fault Geometry")

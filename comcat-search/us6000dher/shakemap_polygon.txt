@@ -1,0 +1,9 @@
+# Source: USGS NEIC Rapid Finite Fault
+# Eventid: us6000dher
+# Model created: 2026-02-09 15:47:08
+141.57 37.53 60.1
+141.88 37.48 24.6
+142.01 37.92 24.6
+141.70 37.98 60.1
+141.57 37.53 60.1
+>

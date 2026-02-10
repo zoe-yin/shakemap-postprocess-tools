@@ -7,7 +7,7 @@ import argparse
 from shapely.geometry import Point, LineString
 from pathlib import Path
 import xml.etree.ElementTree as ET
-
+import json
 
 def haversine(lat1, lon1, lat2, lon2):
     """

@@ -107,32 +107,32 @@ echo "Using region: ${REGION}"
 # write the region to a file for later use
 echo "${REGION}" > ${eventpath}/region.txt
 
-# Plot the FFSIMMER rupture planes for NP1
-echo "Plotting FFSIMMER results for NP1"
-# python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products --cmt ${eventpath}/${eventid}_tensor.json --np 1 --region "${REGION}"
-python ${softpath}plot_ruptquads/plot_ruptquads.py \
-  --file_path ${eventpath}/np1/products \
-  --cmt ${eventpath}/${eventid}_tensor.json \
-  --np 1 \
-  --region="${REGION}" \
-  --psha True \
-  --topo True
+# # Plot the FFSIMMER rupture planes for NP1
+# echo "Plotting FFSIMMER results for NP1"
+# # python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np1/products --cmt ${eventpath}/${eventid}_tensor.json --np 1 --region "${REGION}"
+# python ${softpath}plot_ruptquads/plot_ruptquads.py \
+#   --file_path ${eventpath}/np1/products \
+#   --cmt ${eventpath}/${eventid}_tensor.json \
+#   --np 1 \
+#   --region="${REGION}" \
+#   --psha True \
+#   --topo True
 
-python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/current/event.xml
-cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
+# python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/current/event.xml
+# cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
 
-# Plot the FFSIMMER rupture planes for NP2
-echo "Plotting FFSIMMER results for NP2"
-# python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np2/products --cmt ${eventpath}/${eventid}_tensor.json --np 2 --region "${REGION}"
-python ${softpath}plot_ruptquads/plot_ruptquads.py \
-  --file_path ${eventpath}/np2/products \
-  --cmt ${eventpath}/${eventid}_tensor.json \
-  --np 2 \
-  --region="${REGION}"\
-  --psha True \
-  --topo True
-python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np2/products --eventxml ${eventpath}/current/event.xml
-cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np2/products/
+# # Plot the FFSIMMER rupture planes for NP2
+# echo "Plotting FFSIMMER results for NP2"
+# # python ${softpath}plot_ruptquads/plot_ruptquads.py --file_path ${eventpath}/np2/products --cmt ${eventpath}/${eventid}_tensor.json --np 2 --region "${REGION}"
+# python ${softpath}plot_ruptquads/plot_ruptquads.py \
+#   --file_path ${eventpath}/np2/products \
+#   --cmt ${eventpath}/${eventid}_tensor.json \
+#   --np 2 \
+#   --region="${REGION}"\
+#   --psha True \
+#   --topo True
+# python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np2/products --eventxml ${eventpath}/current/event.xml
+# cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np2/products/
 
 # Run most recent shakemap
 rm current
@@ -140,17 +140,32 @@ echo "Running sm_create once more..."
 sm_create "$eventid"
 
 # Run the "current" ShakeMap
+# Check if the rupture.json file is a Point or MultiPolygon
+# polytype=$(${softpath}/get-rupt-geom.py ${eventpath}/current/rupture.json)
+# if [[ "$polytype" == "Point" ]]; then
+#     echo "Rupture geometry is a Point. Producing the MultiPolygon version."
+#     fsp_file='/Users/hyin/soft/shakemap-postprocess-tools/comcat-search/us6000dher/us6000dher_us_1_complete_inversion.fsp'
+#     output_dir='/Users/hyin/soft/shakemap-postprocess-tools/comcat-search/us6000dher/'
+#     python /Users/hyin/soft/shakemap-postprocess-tools/shakemap_polygon.py ${eventid} ${fsp_file} ${output_dir} 
+
+# elif [[ "$polytype" == "MultiPolygon" ]]; then
+#     echo "Rupture geometry is a MultiPolygon. Running ShakeMap with polygon rupture."
+#     shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt
+# else
+#     echo "Unknown rupture geometry type: ${polytype}. Plotting anyway."
+# fi
+
 echo "Running the current ShakeMap..."
 shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt
 
-# Plot most recent shakeMap
-echo "Plotting the current ShakeMap"
-python ${softpath}plot_ruptquads/plot_ruptquads.py \
-  --file_path ${eventpath}/current/products \
-  --faultgeometry ${eventpath}/current/rupture.json \
-  --region="${REGION}" \
-  --contours True \
-  --topo True
+# # Plot most recent shakeMap
+# echo "Plotting the current ShakeMap"
+# python ${softpath}plot_ruptquads/plot_ruptquads.py \
+#   --file_path ${eventpath}/current/products \
+#   --faultgeometry ${eventpath}/current/rupture.json \
+#   --region="${REGION}" \
+#   --contours True \
+#   --topo True
 
 # Check if current_recent directory exists, if so delete it
 if [[ -d "shakemap_reproduction" ]]; then
