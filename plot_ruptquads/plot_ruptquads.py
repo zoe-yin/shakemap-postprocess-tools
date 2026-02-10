@@ -230,6 +230,8 @@ if args.psha == "True":
 
 # Plot Slab2.0
 slab2 = '/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/slab2.0/slab2.gmt'
+# @todo: update so contours plot with color according to their depth 
+# /Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/slab2.0/Slab2Distribute_Mar2018
 fig.plot(
     data=slab2,
     pen="1p,blue",
@@ -261,6 +263,8 @@ fig.plot(
 #     pen="1p,purple",
 #     label="EFSM20",
 # )
+
+# @todo: Add logic to check if the faults are in the region and plot only relevant fault databases
 
 if file is not None:
     ## Plot Fault ruptures (iterate over each fault)
@@ -311,11 +315,17 @@ if args.contours is not None:
 if ruptjson is not None:
     import geopandas as gpd
     print(f"Plotting fault geometry from {ruptjson}")
-    # x,y = parse_ruptjson(ruptjson)
     gdf = gpd.read_file(ruptjson)
-    # fig.plot(x=x, y=y, pen="2p,black", label="USGS Finite Fault Geometry")
-    fig.plot(data=gdf, pen="2p,black", label="USGS Finite Fault Geometry")
-    # fig.plot(x=[x[0], x[1]], y=[y[0],y[1]], pen="2p,red", label="USGS Fault Top Edge")
+
+    # Calc updip edge 
+    geom = gdf.geometry.iloc[0]  # assuming one multipolygon
+    coords = np.array(geom.geoms[0].exterior.coords)
+    pts = coords.shape[0]
+    updip = coords[:int((pts-1)/2)]
+    fig.plot(data=gdf, pen="1p,black,-", label="Final ShakeMap Geometry")
+    fig.plot(x=updip[:, 0], y=updip[:, 1],pen="2p,black", label='Updip edge')
+    # Extract updip edge and plot
+
 
 # Plot hypocenter
 fig.plot(x=hypocenter[0], y = hypocenter[1], style="a0.9c", pen="1p,black", fill="darkorange", label="Hypocenter")
@@ -329,7 +339,7 @@ if file is not None:
 
 ## Plot the CMT solution and the nodal plane if provided
 if args.cmt is not None:
-    print("Plotting CMT beachball on the map.")
+    print("Plotting the beachball on the map.")
     
     # Plot the Obspy beachball PNG on the PyGMT figure 
     # PyGMT version 0.16.X does not allow position arguments like "TL", so I've updated to PyGMT 0.18.X
