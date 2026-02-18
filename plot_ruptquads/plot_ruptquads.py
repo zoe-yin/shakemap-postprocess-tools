@@ -15,6 +15,8 @@ import sys
 ## Import functions from custom_utils.py
 sys.path.append("/Users/hyin/soft/shakemap-postprocess-tools/shakemap_utils")
 from custom_utils import parse_ruptquads, haversine, parse_ruptjson, parse_eventxml, parse_im_json
+sys.path.append("/Users/hyin/soft/shakemap-postprocess-tools/get-moment-tensor")
+from getMomentTensor import get_nps
 
 ###
 # To test or run as a standalone script in a products directory, try using the following command:
@@ -197,17 +199,6 @@ pygmt.config(FORMAT_GEO_MAP="ddd.x", MAP_FRAME_TYPE="plain", FONT="20p")
 projection = 'M0/0/30c'
 
 fig.basemap(region=rgn, projection=projection, frame=True)
-fig.coast(shorelines=False, region=rgn, projection=projection, water='204/212/219')
-
-if args.topo == "True":
-    # Plot Topo
-    topo = '/Users/hyin/usgs_mendenhall/topo/global_srtm15p/SRTM15_V2.7.nc' #@todo: Figure out the best way to un-hard code this
-    fig.grdimage(
-        grid=topo,
-        cmap="gray",
-        shading=True,
-        transparency=70,
-    )
 
 if args.psha == "True":
     ## Plot PSHA
@@ -227,6 +218,18 @@ if args.psha == "True":
     )
     fig.colorbar(frame='af+lSeismic Hazard PGA (g) 475 yr. (GEM)', position=Position("BL", cstype="outside", offset=(-11.5, 0.5)),length=5,width=0.5, orientation='horizontal')  # forces horizontal
 
+fig.coast(shorelines=False, region=rgn, projection=projection, water='204/212/219')
+
+if args.topo == "True":
+    # Plot Topo
+    topo = '/Users/hyin/usgs_mendenhall/topo/global_srtm15p/SRTM15_V2.7.nc' #@todo: Figure out the best way to un-hard code this
+    fig.grdimage(
+        grid=topo,
+        cmap="gray",
+        shading=True,
+        transparency=70,
+    )
+
 
 # Plot Slab2.0
 slab2 = '/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/slab2.0/slab2.gmt'
@@ -242,7 +245,7 @@ fig.plot(
 faults_global = "/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/gem-global-active-faults-master/gmt/gem_active_faults_harmonized.gmt"
 fig.plot(
     data=faults_global,
-    pen="3p,black",
+    pen="3p,darkolivegreen",
     transparency=60,
     label="GEM Active Faults",
 )
@@ -328,7 +331,7 @@ if ruptjson is not None:
 
 
 # Plot hypocenter
-fig.plot(x=hypocenter[0], y = hypocenter[1], style="a0.9c", pen="1p,black", fill="darkorange", label="Hypocenter")
+fig.plot(x=hypocenter[0], y = hypocenter[1], style="a0.9c", pen="1p,black", fill="white", label="Hypocenter")
 
 if file is not None:
     ## Plot some stats about the ruptures
@@ -340,19 +343,18 @@ if file is not None:
 ## Plot the CMT solution and the nodal plane if provided
 if args.cmt is not None:
     print("Plotting the beachball on the map.")
-    
     # Plot the Obspy beachball PNG on the PyGMT figure 
     # PyGMT version 0.16.X does not allow position arguments like "TL", so I've updated to PyGMT 0.18.X
     fig.image(
         imagefile=f"{file_path}/moment-tensor.png",
         position=Position("TL",offset="1c,1c"),
-        # position="TL",
         width="3c",
     )
     if args.np is not None:
-        strike = cmt["properties"][f"nodal-plane-{args.np}-strike"]
-        dip = cmt["properties"][f"nodal-plane-{args.np}-dip"]
-        rake = cmt["properties"][f"nodal-plane-{args.np}-rake"]
+        np1, np2 = get_nps(args.cmt)
+        strike = np1[0]
+        dip = np1[1]
+        rake = np1[2]
         fig.text(position="TL", offset='5c/-1.2c', text=f"Nodal Plane {args.np}", font="20p,Helvetica,black")
         fig.text(position="TL", offset='5c/-2.2c', text=f"Strike: {strike}\N{DEGREE SIGN}", font="20p,Helvetica,black")
         fig.text(position="TL", offset='5c/-3.2c', text=f"Dip: {dip}\N{DEGREE SIGN}", font="20p,Helvetica,black")

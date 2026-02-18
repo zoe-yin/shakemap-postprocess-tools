@@ -20,31 +20,39 @@ sm_create "$eventid"
 
 cd $eventpath
 
-# Run getmoment.py to create the CMT file
-${softpath}getmoment.py $eventid $eventpath
+echo $eventid
+echo $eventpath
 
 ## Check if np1 and np2 directories already exist, if so delete them
 if [[ -d "np1" ]]; then
     echo "Directory np1 already exists. Deleting np1 directory."
     rm -r np1
-fi      
+fi
+
 if [[ -d "np2" ]]; then
     echo "Directory np2 already exists. Deleting np2 directory."
     rm -r np2
 fi
 
 mkdir np1 np2
-cp -r current/event.xml current/dyfi_dat.json current/instrumented_dat.json np1
-cp -r current/event.xml current/dyfi_dat.json current/instrumented_dat.json np2
+cp -r current/event.xml np1 # current/dyfi_dat.json current/instrumented_dat.json
+cp -r current/event.xml np2 # current/dyfi_dat.json current/instrumented_dat.json
 
 # Get CMT variables
-NP1_STRIKE=$(jq -r '.properties["nodal-plane-1-strike"]' ${eventid}_tensor.json)
-NP1_DIP=$(jq -r '.properties["nodal-plane-1-dip"]' ${eventid}_tensor.json)
-NP2_STRIKE=$(jq -r '.properties["nodal-plane-2-strike"]' ${eventid}_tensor.json)
-NP2_DIP=$(jq -r '.properties["nodal-plane-2-dip"]' ${eventid}_tensor.json)
+# NP1_STRIKE=$(jq -r '.properties["nodal-plane-1-strike"]' ${eventid}_tensor.json)
+# NP1_DIP=$(jq -r '.properties["nodal-plane-1-dip"]' ${eventid}_tensor.json)
+# NP2_STRIKE=$(jq -r '.properties["nodal-plane-2-strike"]' ${eventid}_tensor.json)
+# NP2_DIP=$(jq -r '.properties["nodal-plane-2-dip"]' ${eventid}_tensor.json)
+
+read NP1_STRIKE NP1_DIP NP1_RAKE \
+     NP2_STRIKE NP2_DIP NP2_RAKE \
+     < <(python "${softpath}get-moment-tensor/getMomentTensor.py" "${eventid}" "${eventpath}" )
+
+
+echo "NP1 strike, dip rake: $NP1_STRIKE $NP1_DIP $NP1_RAKE"
 
 # Create model.conf file, set the number of simulations
-FFSIM_NSIM=1
+FFSIM_NSIM=7
 FFSIM_TRUE_GRID=True
 
 # Create a file for the first nodal plane
@@ -107,10 +115,26 @@ echo "Using region: ${REGION}"
 # write the region to a file for later use
 echo "${REGION}" > ${eventpath}/region.txt
 
+# Run Point Source comparison shakemap
+rm -r current
+if [[ -d "ffsimmer_pointsource" ]]; then
+    echo "Directory ffsimmer_pointsource already exists. Deleting ffsimmer_pointsource directory."
+    rm -r ffsimmer_pointsource
+fi
+echo "Running Point Source comparison shakemap..."
+mkdir current
+cp -r sm_create_input/event.xml current/
+shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt
+mv current ffsimmer_pointsource
+
+mv ffsimmer_pointsource/rupt_quads.txt ffsimmer_pointsource/products/
+mv ffsimmer_pointsource/log.txt ffsimmer_pointsource/products/log.txt
+
 # Run most recent shakemap
 rm current
 echo "Running sm_create once more..."
-sm_create "$eventid"
+# sm_create "$eventid"
+cp -r sm_create_input current
 
 echo "Running the current ShakeMap..."
 shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt

@@ -41,6 +41,9 @@ python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --psha True \
   --topo True
 
+# Create contour and epicenter QGIS layers
+python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/np1/event.xml
+cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
 
 ###
 echo "Plotting NP2"
@@ -59,6 +62,26 @@ python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --file_path ${eventpath}/np2/products \
   --cmt ${eventpath}/${eventid}_tensor.json \
   --np 2 \
+  --region="${REGION}" \
+  --psha True \
+  --topo True
+
+python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np2/products --eventxml ${eventpath}/np2/event.xml
+cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np2/products/
+
+###
+echo "Plotting Point Source equivalent"
+### 
+
+python ${softpath}plot_ruptquads/plot_ruptquads.py \
+  --file_path ${eventpath}/ffsimmer_pointsource/products \
+  --region="${REGION}" \
+  --topo True \
+  --contours True
+mv ${eventpath}/ffsimmer_pointsource/products/ruptures_map-view.png ${eventpath}/ffsimmer_pointsource/products/ruptures_contours.png
+
+python ${softpath}plot_ruptquads/plot_ruptquads.py \
+  --file_path ${eventpath}/ffsimmer_pointsource/products \
   --region="${REGION}" \
   --psha True \
   --topo True
