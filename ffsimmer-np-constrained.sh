@@ -43,6 +43,16 @@ else
     rm -r current
 fi
 
+## Extract the tectonic setting from strec_results.json
+json_file=${eventpath}'/shakemap_reproduction/strec_results.json'
+echo $json_file
+TectonicRegion=$(python3 -c "import json; print(json.load(open('$json_file'))['TectonicRegion'])")
+FocalMechanism=$(python3 -c "import json; print(json.load(open('$json_file'))['FocalMechanism'])")
+ProbabilityActive=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilityActive'])")
+ProbabilitySubductionCrustal=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionCrustal'])")
+ProbabilitySubductionInterface=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionInterface'])")
+ProbabilitySubductionIntraslab=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionIntraslab'])")
+
 ## Check if the ffsimmer_pointsource directory is complete
 if [[ -f "$eventpath/ffsimmer_pointsource/products/rupt_quads.txt" ]]; then
     echo "ffsimmer_pointsource is complete. Skipping."
