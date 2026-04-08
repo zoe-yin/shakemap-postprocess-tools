@@ -28,6 +28,7 @@ parser.add_argument('--file_path', type=str, required=True, help='Path to the sh
 parser.add_argument('--region', type=str, default='None', help='Region in the format xmin/xmax/ymin/ymax')
 parser.add_argument('--eventxml', type=str, default=None, help='Path to the rupture event.xml file (optional). Will assume the file is one level up from the file_path if none is provided.')
 parser.add_argument('--faultgeometry', type=str, default=None, help='Path to a rupture.json fault geometry file (optional).')
+parser.add_argument('--ruptquads', type=str, default=None, help='Path to a rupt_quads.txt file or set to True for the default location (optional).')
 parser.add_argument('--contours', type=str, default=None, help='Path to a contour json file containing MMI contours OR set to "True" to look for the default location (optional).')
 parser.add_argument('--topo', type=str, default=None, help='True or False. Whether to plot the topo grid. If True, will look for the topo grid in the default location. (optional)')
 parser.add_argument('--psha', type=str, default=None, help='True or False. Whether to plot the psha grid. If True, will look for the psha grid in the default location. (optional)')
@@ -50,11 +51,16 @@ if args.np is not None and args.cmt is None:
 
 file_path = args.file_path
 
+
+# Check if ruptquads flag was set
 # Check if there is a rupt_quads.txt file in the provided file_path
-if os.path.exists(file_path+'/rupt_quads.txt'):
-    file = os.path.join(file_path, 'rupt_quads.txt')
+if args.ruptquads is not None:
+    if os.path.exists(file_path+'/rupt_quads.txt'):
+        file = os.path.join(file_path, 'rupt_quads.txt')
+    else:
+        print(f"No rupt_quads file found: {file_path+'/rupt_quads.txt'}. Continuing without plotting ruptquads")
+        file=None
 else:
-    print(f"No rupt_quads file found: {file_path+'/rupt_quads.txt'}. Continuing without plotting ruptquads")
     file=None
 
 def plot_cmt(cmt): 
@@ -133,10 +139,10 @@ if file is not None:
     # Calculate average updip depth
     avg_updip_depth = ruptures[["p1_depth"]].mean(axis=1).mean()
     avg_downdip_depth = ruptures[["p3_depth"]].mean(axis=1).mean()
-    print(f"Average aspect ratio: {avg_aspect:.2f}")
-    print(f"Average Fault length: {avg_fault_length:.2f} km")
-    print(f"Average updip depth: {avg_updip_depth:.2f} km")
-    print(f"Average downdip depth: {avg_downdip_depth:.2f} km")
+    # print(f"Average aspect ratio: {avg_aspect:.2f}")
+    # print(f"Average Fault length: {avg_fault_length:.2f} km")
+    # print(f"Average updip depth: {avg_updip_depth:.2f} km")
+    # print(f"Average downdip depth: {avg_downdip_depth:.2f} km")
 
 ## Get hypocenter from the event.xml file
 if args.eventxml is not None:
@@ -145,7 +151,7 @@ if args.eventxml is not None:
 else:
     eventpath = Path(file_path).parents[0] / 'event.xml'
     lat, lon, depth = parse_eventxml(eventpath)
-    print(f"Using default event XML file at: {eventpath}.")
+    # print(f"Using default event XML file at: {eventpath}.")
 
 hypocenter = [lon, lat]                                                 
 
@@ -250,13 +256,13 @@ fig.plot(
     label="GEM Active Faults",
 )
 
-## Plot QFaults
-qfaults = "/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/Qfaults_GIS/SHP/Qfaults_US_Database.gmt"
-fig.plot(
-    data=qfaults,
-    pen="1p,orange",
-    label="QFaults",
-)
+# ## Plot QFaults
+# qfaults = "/Users/hyin/usgs_mendenhall/ffsimmer/map-layers/faults/Qfaults_GIS/SHP/Qfaults_US_Database.gmt"
+# fig.plot(
+#     data=qfaults,
+#     pen="1p,orange",
+#     label="QFaults",
+# )
 
 # # EFSM geojson not plotting for some reason
 # # Plot EFSM 20 
@@ -342,7 +348,7 @@ if file is not None:
 
 ## Plot the CMT solution and the nodal plane if provided
 if args.cmt is not None:
-    print("Plotting the beachball on the map.")
+    # print("Plotting the beachball on the map.")
     # Plot the Obspy beachball PNG on the PyGMT figure 
     # PyGMT version 0.16.X does not allow position arguments like "TL", so I've updated to PyGMT 0.18.X
     fig.image(
@@ -352,9 +358,14 @@ if args.cmt is not None:
     )
     if args.np is not None:
         np1, np2 = get_nps(args.cmt)
-        strike = np1[0]
-        dip = np1[1]
-        rake = np1[2]
+        if args.np == 1:
+            strike = np1[0]
+            dip = np1[1]
+            rake = np1[2]
+        if args.np == 2:
+            strike = np2[0]
+            dip = np2[1]
+            rake = np2[2]
         fig.text(position="TL", offset='5c/-1.2c', text=f"Nodal Plane {args.np}", font="20p,Helvetica,black")
         fig.text(position="TL", offset='5c/-2.2c', text=f"Strike: {strike}\N{DEGREE SIGN}", font="20p,Helvetica,black")
         fig.text(position="TL", offset='5c/-3.2c', text=f"Dip: {dip}\N{DEGREE SIGN}", font="20p,Helvetica,black")

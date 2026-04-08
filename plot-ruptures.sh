@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # eventid='us6000f65h'
 
@@ -35,6 +35,7 @@ mv ${eventpath}/np1/products/ruptures_map-view.png ${eventpath}/np1/products/rup
 
 python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --file_path ${eventpath}/np1/products \
+  --ruptquads True \
   --cmt ${eventpath}/${eventid}_tensor.json \
   --np 1 \
   --region="${REGION}" \
@@ -60,6 +61,7 @@ mv ${eventpath}/np2/products/ruptures_map-view.png ${eventpath}/np2/products/rup
 
 python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --file_path ${eventpath}/np2/products \
+  --ruptquads True \
   --cmt ${eventpath}/${eventid}_tensor.json \
   --np 2 \
   --region="${REGION}" \

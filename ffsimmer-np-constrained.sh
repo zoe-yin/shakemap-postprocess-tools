@@ -24,7 +24,7 @@ if [[ -f "$eventpath/sm_create_input/event.xml" ]]; then
 else
     echo "Running sm_create"
     sm_create "$eventid"
-    mv current sm_create_input
+    mv ${eventpath}/current ${eventpath}/sm_create_input
 fi
 
 ## Check if the shakemap_reproduction directory is complete
@@ -36,41 +36,54 @@ else
         echo "Directory shakemap_reproduction already exists. Deleting shakemap_reproduction directory."
         rm -r shakemap_reproduction
     fi
-    cp -r sm_create_input shakemap_reproduction
-    ln -s shakemap_reproduction current
-    echo "Running the current ShakeMap..."
-    shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt
-    rm -r current
+    # Copy sm_create files over to the reproduction directory
+    cp -r ${eventpath}/sm_create_input ${eventpath}/shakemap_reproduction
+    ln -s ${eventpath}/shakemap_reproduction ${eventpath}/current
+
+    # Check if alternate rupture file exists
+    if [[ -f "$eventpath/shakemap_fault.txt" ]]; then
+        echo "Using alternate ShakeMap Polygon File (shakemap_fault.txt)"
+        rm ${eventpath}/shakemap_reproduction/rupture.json
+        cp ${eventpath}/shakemap_fault.txt ${eventpath}/shakemap_reproduction/
+        echo "Running the current ShakeMap..."
+        shake $eventid assemble -c "rupture config" model rupture contour mapping info gridxml raster >& ${eventpath}/current/log.txt
+        cp ${eventpath}/shakemap_reproduction/products/rupture.json ${eventpath}/shakemap_reproduction/rupture.json
+        rm -r ${eventpath}/current
+    else
+        echo "Running the current ShakeMap..."
+        shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& ${eventpath}/current/log.txt
+        mv ${eventpath}/current/rupt_quads.txt ${eventpath}/current/products/
+        rm -r $eventpath/current
+    fi
 fi
 
-## Extract the tectonic setting from strec_results.json
-json_file=${eventpath}'/shakemap_reproduction/strec_results.json'
-echo $json_file
-TectonicRegion=$(python3 -c "import json; print(json.load(open('$json_file'))['TectonicRegion'])")
-FocalMechanism=$(python3 -c "import json; print(json.load(open('$json_file'))['FocalMechanism'])")
-ProbabilityActive=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilityActive'])")
-ProbabilitySubductionCrustal=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionCrustal'])")
-ProbabilitySubductionInterface=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionInterface'])")
-ProbabilitySubductionIntraslab=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionIntraslab'])")
+# ## Extract the tectonic setting from strec_results.json
+# json_file=${eventpath}'/shakemap_reproduction/strec_results.json'
+# echo $json_file
+# TectonicRegion=$(python3 -c "import json; print(json.load(open('$json_file'))['TectonicRegion'])")
+# FocalMechanism=$(python3 -c "import json; print(json.load(open('$json_file'))['FocalMechanism'])")
+# ProbabilityActive=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilityActive'])")
+# ProbabilitySubductionCrustal=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionCrustal'])")
+# ProbabilitySubductionInterface=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionInterface'])")
+# ProbabilitySubductionIntraslab=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionIntraslab'])")
 
 ## Check if the ffsimmer_pointsource directory is complete
 if [[ -f "$eventpath/ffsimmer_pointsource/products/rupt_quads.txt" ]]; then
     echo "ffsimmer_pointsource is complete. Skipping."
 else
     echo "Running ffsimmer_pointsource"
-    if [[ -d "ffsimmer_pointsource" ]]; then
+    if [[ -d "$eventpath/ffsimmer_pointsource" ]]; then
         echo "Directory ffsimmer_pointsource already exists. Deleting ffsimmer_pointsource directory."
-        rm -r ffsimmer_pointsource
+        rm -r $eventpath/ffsimmer_pointsource
     fi
     echo "Running Point Source comparison shakemap..."
-    mkdir ffsimmer_pointsource
-    cp -r sm_create_input/event.xml ffsimmer_pointsource/
-    ln -s ffsimmer_pointsource current
-    shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt
-    mv current/rupt_quads.txt current/products/
-    cp current/model.conf current/products/
-    mv current/log.txt current/products/log.txt
-    rm -r current
+    mkdir $eventpath/ffsimmer_pointsource
+    cp -r $eventpath/sm_create_input/event.xml $eventpath/ffsimmer_pointsource/
+    ln -s $eventpath/ffsimmer_pointsource $eventpath/current
+    shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& $eventpath/current/log.txt
+    mv ${eventpath}/current/rupt_quads.txt ${eventpath}/current/products/
+    mv ${eventpath}/current/log.txt ${eventpath}/current/products/log.txt
+    rm -r $eventpath/current
 fi
 
 ## Prep NP1 and NP2 configuration files
@@ -84,7 +97,7 @@ FFSIM_NSIM=7
 FFSIM_TRUE_GRID=True
 
 # Create a file for the first nodal plane
-OUTFILE1="np1_model.conf"
+OUTFILE1=${eventpath}"/np1_model.conf"
 cat > "${OUTFILE1}" <<EOF
 [modeling]
     ffsim_nsim = ${FFSIM_NSIM}
@@ -97,7 +110,7 @@ EOF
 echo "Wrote ${OUTFILE1}"
 
 # Create a file for the second nodal plane
-OUTFILE2="np2_model.conf"
+OUTFILE2=${eventpath}"/np2_model.conf"
 cat > "${OUTFILE2}" <<EOF
 [modeling]
     ffsim_nsim = ${FFSIM_NSIM}
@@ -126,35 +139,35 @@ if [[ $missing == false ]]; then
 else
     echo "Running NP1 and NP2 shakemaps"
     ## Clear and Set Up the NP1 and NP2 directories
-    if [[ -d "np1" ]]; then
+    if [[ -d "$eventpath/np1" ]]; then
         echo "Directory np1 already exists. Deleting np1 directory."
-        rm -r np1
+        rm -r $eventpath/np1
     fi
-    if [[ -d "np2" ]]; then
+    if [[ -d "$eventpath/np2" ]]; then
         echo "Directory np2 already exists. Deleting np2 directory."
-        rm -r np2
+        rm -r $eventpath/np2
     fi
-    mkdir np1 np2
-    mv np1_model.conf np1/model.conf
-    cp -r sm_create_input/event.xml np1
-    mv np2_model.conf np2/model.conf
-    cp -r sm_create_input/event.xml np2
+    mkdir $eventpath/np1 $eventpath/np2
+    mv $eventpath/np1_model.conf $eventpath/np1/model.conf
+    cp -r $eventpath/sm_create_input/event.xml $eventpath/np1
+    mv $eventpath/np2_model.conf $eventpath/np2/model.conf
+    cp -r $eventpath/sm_create_input/event.xml $eventpath/np2
 
     # Run ShakeMap for NP1
-    ln -s np1 current
-    shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt
-    mv current/rupt_quads.txt current/products/
-    cp current/model.conf current/products/
-    mv current/log.txt current/products/log.txt
-    rm current
+    ln -s $eventpath/np1 $eventpath/current
+    shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& $eventpath/current/log.txt
+    mv $eventpath/current/rupt_quads.txt $eventpath/current/products/
+    cp $eventpath/current/model.conf $eventpath/current/products/
+    mv $eventpath/current/log.txt $eventpath/current/products/log.txt
+    rm $eventpath/current
 
     # Run ShakeMap for NP2
-    ln -s np2 current
-    shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& current/log.txt
-    mv current/rupt_quads.txt current/products/
-    cp current/model.conf current/products/
-    mv current/log.txt current/products/log.txt
-    rm current
+    ln -s $eventpath/np2 $eventpath/current
+    shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& $eventpath/current/log.txt
+    mv $eventpath/current/rupt_quads.txt $eventpath/current/products/
+    cp $eventpath/current/model.conf $eventpath/current/products/
+    mv $eventpath/current/log.txt $eventpath/current/products/log.txt
+    rm $eventpath/current
 fi
 
 ## Get region dimensions from both rupt_quad.txt files
