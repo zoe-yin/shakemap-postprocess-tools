@@ -84,6 +84,7 @@ mv ${eventpath}/ffsimmer_pointsource/products/ruptures_map-view.png ${eventpath}
 
 python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --file_path ${eventpath}/ffsimmer_pointsource/products \
+  --ruptquads True \
   --region="${REGION}" \
   --psha True \
   --topo True

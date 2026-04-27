@@ -67,64 +67,64 @@ def main():
         file=None
 
     def plot_cmt(cmt): 
-    import matplotlib.pyplot as plt
-    from obspy.imaging.beachball import beach
-    import numpy as np
+        import matplotlib.pyplot as plt
+        from obspy.imaging.beachball import beach
+        import numpy as np
 
-    # s1 = float(cmt['properties']['nodal-plane-1-strike'])
-    # d1 = float(cmt['properties']['nodal-plane-1-dip'])
-    # r1 = float(cmt['properties']['nodal-plane-1-rake'])
+        # s1 = float(cmt['properties']['nodal-plane-1-strike'])
+        # d1 = float(cmt['properties']['nodal-plane-1-dip'])
+        # r1 = float(cmt['properties']['nodal-plane-1-rake'])
 
-    mrr1 = float(cmt['properties']['tensor-mrr'])
-    mtt1 = float(cmt['properties']['tensor-mtt'])
-    mpp1 = float(cmt['properties']['tensor-mpp'])
-    mrt1 = float(cmt['properties']['tensor-mrt'])
-    mrp1 = float(cmt['properties']['tensor-mrp'])
-    mtp1 = float(cmt['properties']['tensor-mtp'])
+        mrr1 = float(cmt['properties']['tensor-mrr'])
+        mtt1 = float(cmt['properties']['tensor-mtt'])
+        mpp1 = float(cmt['properties']['tensor-mpp'])
+        mrt1 = float(cmt['properties']['tensor-mrt'])
+        mrp1 = float(cmt['properties']['tensor-mrp'])
+        mtp1 = float(cmt['properties']['tensor-mtp'])
 
-    # Moment tensor
-    mt = [
-        mrr1,
-        mtt1,
-        mpp1,
-        mrt1,
-        mrp1,
-        mtp1,
-    ]
+        # Moment tensor
+        mt = [
+            mrr1,
+            mtt1,
+            mpp1,
+            mrt1,
+            mrp1,
+            mtp1,
+        ]
 
-    # Create figure and axes explicitly
-    fig, ax = plt.subplots(figsize=(4, 4))
+        # Create figure and axes explicitly
+        fig, ax = plt.subplots(figsize=(4, 4))
 
-    # Create beachball (returns a PatchCollection)
-    width = 200
-    bb = beach(
-        mt,
-        xy=(0, 0),
-        width=width,
-        facecolor="black",
-        linewidth=1
-    )
+        # Create beachball (returns a PatchCollection)
+        width = 200
+        bb = beach(
+            mt,
+            xy=(0, 0),
+            width=width,
+            facecolor="black",
+            linewidth=1
+        )
 
-    # Add to axes
-    ax.add_collection(bb)
-    r = width / 1.9
+        # Add to axes
+        ax.add_collection(bb)
+        r = width / 1.9
 
-    # Scale the figure to fit the beachball
-    ax.set_xlim(-r, r)
-    ax.set_ylim(-r, r)
+        # Scale the figure to fit the beachball
+        ax.set_xlim(-r, r)
+        ax.set_ylim(-r, r)
 
-    ax.set_aspect("equal")
-    ax.axis("off")
+        ax.set_aspect("equal")
+        ax.axis("off")
 
-    eventid = cmt["properties"]["eventsourcecode"]
+        eventid = cmt["properties"]["eventsourcecode"]
 
-    plt.savefig(
-        f'{file_path}/moment-tensor.png',
-        dpi=300,
-        bbox_inches="tight",
-        pad_inches=0,
-        transparent=True
-    )
+        plt.savefig(
+            f'{file_path}/moment-tensor.png',
+            dpi=300,
+            bbox_inches="tight",
+            pad_inches=0,
+            transparent=True
+        ) 
     
     ###################################################
     #                   CALCULATIONS                #
