@@ -155,31 +155,43 @@ def calc_thingbaijam(M):
 
     return length, width, area
 
-def plot_cmt(cmt): 
+def parse_mt(mtfile): 
     """
-    Parse a CMT JSON file containing the moment tensor.
-    e.g., cont_mmi.json, cont_pga.json, cont_pgv.json, etc. 
+    Parse a JSON file containing moment tensor information (e.g., us6000rsy1_tensor.json) and pass back a moment tensor object
     Args:
-        file: Path to the JSON file.
+        cmtfile: Path to the MT JSON file.
+        output (optional): Path to write the beachball jpeg, defaults to the location of the json file. 
     Returns:
-        Geodataframe with IM data. Ready to plot in PyGMT
+        Moment tensor obejct (list of 6 components: mrr, mtt, mpp, mrt, mrp, mtp)
     """
     import matplotlib.pyplot as plt
     from obspy.imaging.beachball import beach
     import numpy as np
+  
+
+    # # Find some info about the event from the JSON file, e.g., eventid, time, location, etc.
+    # inputdir = os.path.dirname(mtfile)
+    # eventid = os.path.basename(mtfile).split("_tensor.json")[0]
+
+    import json
+    with open(mtfile, 'r') as json_file:
+        mt_dict = json.load(json_file)
 
     # s1 = float(cmt['properties']['nodal-plane-1-strike'])
     # d1 = float(cmt['properties']['nodal-plane-1-dip'])
     # r1 = float(cmt['properties']['nodal-plane-1-rake'])
 
-    mrr1 = float(cmt['properties']['tensor-mrr'])
-    mtt1 = float(cmt['properties']['tensor-mtt'])
-    mpp1 = float(cmt['properties']['tensor-mpp'])
-    mrt1 = float(cmt['properties']['tensor-mrt'])
-    mrp1 = float(cmt['properties']['tensor-mrp'])
-    mtp1 = float(cmt['properties']['tensor-mtp'])
+    mrr1 = float(mt_dict['properties']['tensor-mrr'])
+    mtt1 = float(mt_dict['properties']['tensor-mtt'])
+    mpp1 = float(mt_dict['properties']['tensor-mpp'])
+    mrt1 = float(mt_dict['properties']['tensor-mrt'])
+    mrp1 = float(mt_dict['properties']['tensor-mrp'])
+    mtp1 = float(mt_dict['properties']['tensor-mtp'])
 
-    # Moment tensor
+    eventid = mt_dict["properties"]['eventsource'] + mt_dict["properties"]["eventsourcecode"]
+    # print(mt_dict["properties"])
+
+    # write moment tensor comonents as a list
     mt = [
         mrr1,
         mtt1,
@@ -188,6 +200,48 @@ def plot_cmt(cmt):
         mrp1,
         mtp1,
     ]
+
+    return mt, eventid
+
+def plot_mt(mt, eventid, outdir=None, depth=None, pager=None):
+    """
+    Plot a moment tensor as a beachball as a PNG that can be used in the catalog. 
+    The PNG will be saved in the specified output directory (or current working directory if not specified) with the name "{eventid}_moment-tensor.png".
+    Args:
+        mt: Moment tensor object (list of 6 components).
+        eventid: Event ID.
+        outdir: Output directory for the plot (default is the current working directory)
+    """
+    import matplotlib.pyplot as plt
+    from obspy.imaging.beachball import beach
+    import numpy as np
+    if outdir is None:
+        outdir = os.getcwd()
+
+    if depth is None:
+        color='black' # Default color if depth if not provided
+    else:
+        # # Define a colormap for depth (you can customize this as needed)
+        # cmap = plt.get_cmap('magma')
+        # norm_depth = min(max(depth / 500, 0), 1)  # Normalize depth to [0, 1] range (assuming max depth of 200 km)
+        # color = cmap(norm_depth)
+        depth_min = 0
+        depth_max = 200
+
+        norm_depth = (depth - depth_min) / (depth_max - depth_min)
+        norm_depth = max(0, min(norm_depth, 1))
+        cmap = plt.get_cmap('magma_r')
+        color = cmap(norm_depth)
+
+    if pager is not None:
+        # Define a colormap for PAGER alert level
+        pager_colors = {
+            'green':  '#2E8B57',
+            'yellow': '#F4C430',
+            'orange': '#F28C28',
+            'red':    '#B22222',
+        }
+        color = pager_colors.get(pager.lower(), color)  # Use PAGER color if valid, otherwise use depth color
 
     # Create figure and axes explicitly
     fig, ax = plt.subplots(figsize=(4, 4))
@@ -198,7 +252,7 @@ def plot_cmt(cmt):
         mt,
         xy=(0, 0),
         width=width,
-        facecolor="black",
+        facecolor=color,
         linewidth=1
     )
 
@@ -213,12 +267,12 @@ def plot_cmt(cmt):
     ax.set_aspect("equal")
     ax.axis("off")
 
-    eventid = cmt["properties"]["eventsourcecode"]
-
     plt.savefig(
-        f'{file_path}/moment-tensor.png',
+        f'{outdir}/{eventid}_moment-tensor.png',
         dpi=300,
         bbox_inches="tight",
         pad_inches=0,
         transparent=True
     )
+    plt.close(fig)
+    print(f"Saved beachball PNG to {outdir}/{eventid}_moment-tensor.png")

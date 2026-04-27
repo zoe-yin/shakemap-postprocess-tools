@@ -93,7 +93,7 @@ read NP1_STRIKE NP1_DIP NP1_RAKE \
 echo "NP1 strike, dip rake: $NP1_STRIKE $NP1_DIP $NP1_RAKE"
 
 # Create model.conf file, set the number of simulations
-FFSIM_NSIM=7
+FFSIM_NSIM=20
 FFSIM_TRUE_GRID=True
 
 # Create a file for the first nodal plane
