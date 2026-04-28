@@ -37,6 +37,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
 ## Import functions from custom_utils.py
 sys.path.append("/Users/hyin/soft/shakemap-postprocess-tools/shakemap_utils")
 from custom_utils import parse_ruptquads, haversine, parse_ruptjson, parse_eventxml

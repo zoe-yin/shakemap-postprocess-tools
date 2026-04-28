@@ -20,60 +20,63 @@ else
     echo "region.txt file not found."
 fi
 
-###
+##############################################
 echo "Plotting NP1"
-### 
+##############################################
+# check if the directory exists: 
+if [[ -f "$eventpath/np1/products/rupt_quads.txt" ]]; then
+    echo "Plotting $eventpath/np1/products."
+    python ${softpath}plot_ruptquads/plot_ruptquads.py \
+      --file_path ${eventpath}/np1/products \
+      --cmt ${eventpath}/${eventid}_tensor.json \
+      --np 1 \
+      --region="${REGION}" \
+      --topo True \
+      --contours True
+    mv ${eventpath}/np1/products/ruptures_map-view.png ${eventpath}/np1/products/ruptures_contours.png
 
-python ${softpath}plot_ruptquads/plot_ruptquads.py \
-  --file_path ${eventpath}/np1/products \
-  --cmt ${eventpath}/${eventid}_tensor.json \
-  --np 1 \
-  --region="${REGION}" \
-  --topo True \
-  --contours True
-mv ${eventpath}/np1/products/ruptures_map-view.png ${eventpath}/np1/products/ruptures_contours.png
+    python ${softpath}plot_ruptquads/plot_ruptquads.py \
+      --file_path ${eventpath}/np1/products \
+      --ruptquads True \
+      --cmt ${eventpath}/${eventid}_tensor.json \
+      --np 1 \
+      --region="${REGION}" \
+      --psha True \
+      --topo True
 
-python ${softpath}plot_ruptquads/plot_ruptquads.py \
-  --file_path ${eventpath}/np1/products \
-  --ruptquads True \
-  --cmt ${eventpath}/${eventid}_tensor.json \
-  --np 1 \
-  --region="${REGION}" \
-  --psha True \
-  --topo True
+    # Create contour and epicenter QGIS layers
+    python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/np1/event.xml
+    cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
+fi
 
-# Create contour and epicenter QGIS layers
-python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np1/products --eventxml ${eventpath}/np1/event.xml
-cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np1/products/
-
-###
+##############################################
 echo "Plotting NP2"
-### 
+##############################################
+if [[ -f "$eventpath/np2/products/rupt_quads.txt" ]]; then
+  python ${softpath}plot_ruptquads/plot_ruptquads.py \
+    --file_path ${eventpath}/np2/products \
+    --cmt ${eventpath}/${eventid}_tensor.json \
+    --np 2 \
+    --region="${REGION}" \
+    --topo True \
+    --contours True
+  mv ${eventpath}/np2/products/ruptures_map-view.png ${eventpath}/np2/products/ruptures_contours.png
 
-python ${softpath}plot_ruptquads/plot_ruptquads.py \
-  --file_path ${eventpath}/np2/products \
-  --cmt ${eventpath}/${eventid}_tensor.json \
-  --np 2 \
-  --region="${REGION}" \
-  --topo True \
-  --contours True
-mv ${eventpath}/np2/products/ruptures_map-view.png ${eventpath}/np2/products/ruptures_contours.png
+  python ${softpath}plot_ruptquads/plot_ruptquads.py \
+    --file_path ${eventpath}/np2/products \
+    --ruptquads True \
+    --cmt ${eventpath}/${eventid}_tensor.json \
+    --np 2 \
+    --region="${REGION}" \
+    --psha True \
+    --topo True
 
-python ${softpath}plot_ruptquads/plot_ruptquads.py \
-  --file_path ${eventpath}/np2/products \
-  --ruptquads True \
-  --cmt ${eventpath}/${eventid}_tensor.json \
-  --np 2 \
-  --region="${REGION}" \
-  --psha True \
-  --topo True
-
-python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np2/products --eventxml ${eventpath}/np2/event.xml
-cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np2/products/
-
-###
+  python ${softpath}qgis-utils/ffsimmer2qgis.py --productdir ${eventpath}/np2/products --eventxml ${eventpath}/np2/event.xml
+  cp /Users/hyin/usgs_mendenhall/ffsimmer/styles-cpts/qgis-qmls/*.qml  ${eventpath}/np2/products/
+fi
+##############################################
 echo "Plotting Point Source equivalent"
-### 
+############################################## 
 
 python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --file_path ${eventpath}/ffsimmer_pointsource/products \
@@ -89,13 +92,37 @@ python ${softpath}plot_ruptquads/plot_ruptquads.py \
   --psha True \
   --topo True
 
-###
-echo "Plotting current ShakeMap Reproduction"
-### 
+##############################################
+echo "Plotting Slab2-pinned Rupture"
+##############################################
+if [[ -f "$eventpath/slab2/products/rupt_quads.txt" ]]; then
+  echo "[INFO] Subduction Interface (Slab2) dir is complete. Plotting."
+  python ${softpath}plot_ruptquads/plot_ruptquads.py \
+    --file_path ${eventpath}/slab2/products \
+    --region="${REGION}" \
+    --topo True \
+    --contours True
+    # --ruptquads True
+  mv ${eventpath}/slab2/products/ruptures_map-view.png ${eventpath}/slab2/products/ruptures_contours.png
 
-python ${softpath}plot_ruptquads/plot_ruptquads.py \
-  --file_path ${eventpath}/shakemap_reproduction/products \
-  --faultgeometry ${eventpath}/shakemap_reproduction/rupture.json \
-  --region="${REGION}" \
-  --contours True \
-  --topo True
+  python ${softpath}plot_ruptquads/plot_ruptquads.py \
+    --file_path ${eventpath}/slab2/products \
+    --ruptquads True \
+    --region="${REGION}" \
+    --topo True \
+    --ruptquads True
+fi
+
+##############################################
+echo "Plotting current ShakeMap Reproduction"
+##############################################
+if [[ -f "$eventpath/shakemap_reproduction/products/grid.xml" ]]; then
+  python ${softpath}plot_ruptquads/plot_ruptquads.py \
+    --file_path ${eventpath}/shakemap_reproduction/products \
+    --faultgeometry ${eventpath}/shakemap_reproduction/rupture.json \
+    --region="${REGION}" \
+    --contours True \
+    --topo True
+fi
+
+

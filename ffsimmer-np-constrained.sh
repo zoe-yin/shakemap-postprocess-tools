@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 
-#!/usr/bin/env bash
-
 set -euo pipefail
 
 usage() {
-    echo "Usage: $0 [-u] [-c] [-r] EVENTID"
+    echo "Usage: $0 [-u] [-c] [-r] [-s] EVENTID"
     echo "  -u : run unconstrained (ffsimmer_pointsource)"
     echo "  -c : run constrained (NP1/NP2)"
     echo "  -r : run reproduction"
+    echo "  -s : run subduction interface constraint"
     exit 1
 }
 
@@ -16,13 +15,15 @@ usage() {
 run_unconstrained=false
 run_constrained=false
 run_reproduction=false
+run_subduction=false
 
 # Parse flags
-while getopts ":ucr" opt; do
+while getopts ":ucrs" opt; do
     case ${opt} in
         u) run_unconstrained=true ;;
         c) run_constrained=true ;;
         r) run_reproduction=true ;;
+        s) run_subduction=true ;;
         *) usage ;;
     esac
 done
@@ -33,7 +34,7 @@ shift $((OPTIND - 1))
 eventid="$1"
 
 # Optional: if no flags provided, run everything
-if ! $run_unconstrained && ! $run_constrained && ! $run_reproduction; then
+if ! $run_unconstrained && ! $run_constrained && ! $run_reproduction &&! $run_subduction; then
     echo "No flags provided."
     usage
 fi
@@ -60,18 +61,18 @@ fi
 #############################################
 #           Reproduction ShakeMap           #
 #############################################
+## Check if sm_create has already been run and saved as sm_create_input
+if [[ -f "$eventpath/sm_create_input/event.xml" ]]; then
+    echo "sm_create has already been run. Skipping"
+else
+    echo "Running sm_create"
+    sm_create "$eventid"
+    mv ${eventpath}/current ${eventpath}/sm_create_input
+fi
+
 
 # Check if the user wants to run the reproduction ShakeMap
 if $run_reproduction; then
-    ## Check if sm_create has already been run and saved as sm_create_input
-    if [[ -f "$eventpath/sm_create_input/event.xml" ]]; then
-        echo "sm_create has already been run. Skipping"
-    else
-        echo "Running sm_create"
-        sm_create "$eventid"
-        mv ${eventpath}/current ${eventpath}/sm_create_input
-    fi
-
     ## Check if the shakemap_reproduction directory is complete
     if [[ -f "$eventpath/shakemap_reproduction/products/grid.xml" ]]; then
         echo "shakemap_reproduction is complete. Skipping."
@@ -106,15 +107,6 @@ if $run_reproduction; then
     fi
 fi
 
-# ## Extract the tectonic setting from strec_results.json
-# json_file=${eventpath}'/shakemap_reproduction/strec_results.json'
-# echo $json_file
-# TectonicRegion=$(python3 -c "import json; print(json.load(open('$json_file'))['TectonicRegion'])")
-# FocalMechanism=$(python3 -c "import json; print(json.load(open('$json_file'))['FocalMechanism'])")
-# ProbabilityActive=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilityActive'])")
-# ProbabilitySubductionCrustal=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionCrustal'])")
-# ProbabilitySubductionInterface=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionInterface'])")
-# ProbabilitySubductionIntraslab=$(python3 -c "import json; print(json.load(open('$json_file'))['ProbabilitySubductionIntraslab'])")
 
 
 #############################################
@@ -233,9 +225,56 @@ if $run_constrained; then
     fi
 fi
 
-## Get region dimensions from both rupt_quad.txt files
-REGION=$(python /Users/hyin/soft/shakemap-postprocess-tools/calc-region_rupt_quads.py --rq ${eventpath}/np1/products/rupt_quads.txt ${eventpath}/np2/products/rupt_quads.txt)
-echo "Using region: ${REGION}"
+#############################################
+#            Subduction ShakeMap            #
+#############################################
+if $run_subduction; then
+    echo "Running subduction interface workflow"
+    mkdir -p $eventpath/slab2
 
-# write the region to a file for later use
-echo "${REGION}" > ${eventpath}/region.txt
+    if [[ -f "$eventpath/slab2/products/rupt_quads.txt" ]]; then
+        echo "[INFO] Subduction Interface (Slab2) dir is complete. Skipping."
+    else
+        echo "Running Subduction Interface (Slab2) shakemaps"
+        # Check if the STEC results are already available
+        if [[ -f "$eventpath/slab2/strec_results.json" ]]; then
+            echo "[INFO] Using existing STREC results"
+        else
+            echo "RUnning strec"
+            cp -r $eventpath/sm_create_input/event.xml $eventpath/slab2
+            ln -s $eventpath/slab2 $eventpath/current
+            shake $eventid select
+        fi
+        # Get SLAB2 strike and dip from strec_results.json
+        SLAB2_STRIKE=$(python3 -c "import json; print(json.load(open('$eventpath/slab2/strec_results.json'))['SlabModelStrike'])")
+        SLAB2_DIP=$(python3 -c "import json; print(json.load(open('$eventpath/slab2/strec_results.json'))['SlabModelDip'])")
+        echo "SLAB2_STRIKE: $SLAB2_STRIKE"
+        echo "SLAB2_DIP: $SLAB2_DIP"
+
+        # Create model.conf file, set the number of simulations
+        FFSIM_NSIM=20
+        FFSIM_TRUE_GRID=True
+
+        python ${softpath}/write_model_conf.py \
+            --outfile "${eventpath}/slab2/model.conf" \
+            --nsim "$FFSIM_NSIM" \
+            --true-grid "$FFSIM_TRUE_GRID" \
+            --strike "$SLAB2_STRIKE" \
+            --dip "$SLAB2_DIP"
+        
+        # Run ShakeMap
+        ln -s $eventpath/slab2 $eventpath/current
+        shake $eventid select assemble -c "test" model contour mapping info gridxml raster >& $eventpath/current/log.txt
+        mv $eventpath/current/rupt_quads.txt $eventpath/current/products/
+        cp $eventpath/current/model.conf $eventpath/current/products/
+        mv $eventpath/current/log.txt $eventpath/current/products/log.txt
+        rm $eventpath/current
+    fi
+fi
+
+# ## Get region dimensions from both rupt_quad.txt files
+# REGION=$(python /Users/hyin/soft/shakemap-postprocess-tools/calc-region_rupt_quads.py --rq ${eventpath}/np1/products/rupt_quads.txt ${eventpath}/np2/products/rupt_quads.txt)
+# echo "Using region: ${REGION}"
+
+# # write the region to a file for later use
+# echo "${REGION}" > ${eventpath}/region.txt
