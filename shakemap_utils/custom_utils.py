@@ -54,6 +54,130 @@ def parse_ruptjson(file):
     print(f'depth: {str(depth)}')
     return x, y
 
+def get_geometry_type(json_path):
+    with open(json_path, "r") as f:
+        data = json.load(f)
+
+    features = data.get("features", [])
+    if not features:
+        raise ValueError("No features found in JSON")
+
+    # Assuming one feature (ShakeMap-style)
+    geometry_type = features[0]["geometry"]["type"]
+    return geometry_type
+
+def dims_from_ruptjson(file):
+    """
+    Parse a JSON file containing rupture data and calculate the length and width of the rupture.
+    Args:
+        file: Path to the JSON file.
+    Returns:
+        length and width of the rupture in meters. 
+    """
+    import geopandas as gpd
+    import pandas as pd
+    import numpy as np
+    from shapely.ops import transform
+    # json_path = '/Users/hyin/shakemap_profiles/default/data/us6000f65h/shakemap_reproduction/rupture.json'      # single segment
+    # json_path = '/Users/hyin/shakemap_profiles/default/data/us6000jllz/shakemap_reproduction/rupture.json'    # multi-segment along-strike (Türkiye)
+    # json_path = '/Users/hyin/shakemap_profiles/default/data/us6000qw60/shakemap_reproduction/rupture.json'      # multi-segment along-dip (Kamchatka)
+    # json_path = '/Users/hyin/shakemap_profiles/default/data/official20041226005853450_30/rupture.json'    # 2004 Sumatra (multi-segment along-dip)
+
+    # Check if the geometry type is a point, MultiPolygon or something else?
+    type = get_geometry_type(file)
+    if type == 'Point': 
+        print (f"Geometry type: {type}, SKIPPING")
+        length=float('nan')
+        width=float('nan')
+    else: 
+        gdf = gpd.read_file(file)
+        # Estimate appropriate UTM CRS
+        utm_crs = gdf.estimate_utm_crs()
+
+        # Reproject to meters (this drops Z, so we'll reattach it manually later)
+        gdf_utm = gdf.to_crs(utm_crs)
+        def scale_z(x, y, z=None):
+            if z is None:
+                return (x, y)
+            return (x, y, z * 1000.0)
+
+        # Convert the Z coordinate from km to m
+        gdf_utm["geometry"] = gdf_utm["geometry"].apply(
+            lambda geom: transform(scale_z, geom)
+        )
+
+        geom = gdf_utm.geometry.iloc[0]
+
+        dip_segment_id = 0
+        along_dip_counts = 0   # number of rings per polygon
+        top_edges = []          # for detecting along-strike segmentation
+        rows = []
+
+        for poly in geom.geoms:
+            # collect all rings (exterior + interiors)
+            # For ShakeMap rupture.json files, each ring corresponds to a unique segment, 
+            # but can be either along-strike segements (usually representing a discontinuous fault) or along-dip (usually representing a subduction interface)
+            # each ring can contain a complex geometry with many top-edge vertices, so we calculate along-strike length 
+            rings = [poly.exterior] + list(poly.interiors)
+            print(f"Number of rings {len(rings)}")
+            
+            total_length = 0
+            total_width = 0
+            for ring in rings:
+                coords = list(ring.coords)  # pull coordinates for each ring
+                along_strike_segments = (((len(coords) -1)/2)) -1
+                print(f"Along-strike segments {int(along_strike_segments)}")
+                # Calc along-dip length
+                dip_length = 0
+                # Find the two points that deliniate along-dip vector
+                dip_length += np.linalg.norm(np.array(coords[0]) - np.array(coords[-2]))
+                # Calc along-strike length
+                strike_length = 0
+                for i in range(int(along_strike_segments)): 
+                    strike_length += np.linalg.norm(np.array(coords[i+1]) - np.array(coords[i]))
+                for j, (x, y, z) in enumerate(coords):
+                    rows.append({
+                        "dip_segment_id": dip_segment_id,
+                        "vertex_id": j,
+                        "x": x,
+                        "y": y,
+                        "z": z,
+                        "strike_length": strike_length,
+                        "dip_length": dip_length
+                    })
+                print(f"Segement length along-strike (m): {strike_length}")
+                print(f"Segement width along-dip (m): {dip_length}")
+                print(dip_length)
+
+                dip_segment_id += 1
+                total_length += strike_length
+                total_width += dip_length
+
+        df = pd.DataFrame(rows)
+        # Check the number of unique depth values
+        dip_segments = df['z'].nunique() - 1
+
+        for i in range(len(rings)): 
+            if dip_segments > 1:
+                width = total_width
+                length = total_length / dip_segments
+            elif along_strike_segments > 1: 
+                length = total_length
+                # Confirm only 1 along-dip segment
+                if dip_segments > 1: 
+                    print("Error: More than 1 along-dip segment detected when calculating length for along-strike segmentation. Check the geometry and segmentation logic.")
+                print(f"Along-dip segments: {dip_segments}")
+                width = dip_length  # assumes that if there is >1 along-strike segment then there is only 1 along-dip segment
+            else: 
+                length = total_length 
+                width = total_width
+
+        print(f"Total length (m): {length}")
+        print(f"Total width (m): {width}")
+        print(f"Number of along-dip segments: {dip_segments}")
+    return length, width
+
+
 def parse_ruptquads(file):
     """
     Parse a rupt_quads.txt file containing rupture plane realization geometries (produced by ShakeMap)

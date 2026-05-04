@@ -20,7 +20,6 @@ def get_geometry_type(json_path):
     geometry_type = features[0]["geometry"]["type"]
     return geometry_type
 
-
 def main():
     if len(sys.argv) != 2:
         print("Usage: python check_geometry.py <file.json>")
@@ -38,6 +37,13 @@ def main():
         # For example:
         # fsp_file = fetch_fsp_file(event_id)
         # convert_fsp_to_rupture(fsp_file, output_path)
+    else: 
+        print("Geometry is MultiPolygon. No conversion needed.")
+        # import geopandas as gpd
+        # print(f"Plotting fault geometry from {json_path}")
+        # gdf = gpd.read_file(json_path)
+        # # Calculate area of the multipolygon
+
 
 if __name__ == "__main__":
     main()

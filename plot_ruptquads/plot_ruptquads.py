@@ -291,12 +291,12 @@ def main():
             if index == 0:
                 # Only add label for the first fault to avoid duplicate legend entries
                 # Plot the rupture plane projected to the surface
-                fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=70, label=f"Fault Realizations +S.5c", region=rgn, projection=projection)
+                fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='2p,darkblue',  transparency=70, label=f"Fault Realizations +S.5c", region=rgn, projection=projection)
                 # Plot the updip edge
-                fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=50, label=f"Fault Updip edge +S.5c", region=rgn, projection=projection)
+                fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='2p,darkred',  transparency=50, label=f"Fault Updip edge +S.5c", region=rgn, projection=projection)
             else:
-                fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='4p,darkblue',  transparency=70, region=rgn, projection=projection)
-                fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='4p,darkred',  transparency=50, region=rgn, projection=projection)
+                fig.plot(x=[p1[0], p2[0], p3[0], p4[0], p5[0]], y=[p1[1], p2[1], p3[1], p4[1],p5[1]], pen='2p,darkblue',  transparency=70, region=rgn, projection=projection)
+                fig.plot(x=[p1[0], p2[0]], y=[p1[1], p2[1]], pen='2p,darkred',  transparency=50, region=rgn, projection=projection)
 
     ## Plot MMI contours if available
     if args.contours is not None:   

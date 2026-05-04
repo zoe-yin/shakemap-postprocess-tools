@@ -101,8 +101,8 @@ if [[ -f "$eventpath/slab2/products/rupt_quads.txt" ]]; then
     --file_path ${eventpath}/slab2/products \
     --region="${REGION}" \
     --topo True \
-    --contours True
-    # --ruptquads True
+    --contours True \
+    --ruptquads True
   mv ${eventpath}/slab2/products/ruptures_map-view.png ${eventpath}/slab2/products/ruptures_contours.png
 
   python ${softpath}plot_ruptquads/plot_ruptquads.py \

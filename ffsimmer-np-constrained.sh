@@ -242,14 +242,14 @@ if $run_subduction; then
         else
             echo "RUnning strec"
             cp -r $eventpath/sm_create_input/event.xml $eventpath/slab2
-            ln -s $eventpath/slab2 $eventpath/current
+            # ln -s $eventpath/slab2 $eventpath/current
             shake $eventid select
         fi
         # Get SLAB2 strike and dip from strec_results.json
         SLAB2_STRIKE=$(python3 -c "import json; print(json.load(open('$eventpath/slab2/strec_results.json'))['SlabModelStrike'])")
         SLAB2_DIP=$(python3 -c "import json; print(json.load(open('$eventpath/slab2/strec_results.json'))['SlabModelDip'])")
-        echo "SLAB2_STRIKE: $SLAB2_STRIKE"
-        echo "SLAB2_DIP: $SLAB2_DIP"
+        echo "     SLAB2_STRIKE: $SLAB2_STRIKE"
+        echo "     SLAB2_DIP: $SLAB2_DIP"
 
         # Create model.conf file, set the number of simulations
         FFSIM_NSIM=20
